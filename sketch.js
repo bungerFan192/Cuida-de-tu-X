@@ -76,14 +76,17 @@ let gameOverGalletas = false;
 let gameOverNinja = false;
 let gameOverClimb = false;
 
-// --- VARIABLES MINIJUEGO TERREMOTO DEFORME ---
+// --- VARIABLES MINIJUEGO TERREMOTO DEFORME MODIFICADO ---
 let terremotoPuntos = [];
 let terremotoPinchos = [];
+let terremotoSenales = [];
 let terremotoMonedas = [];
 let terremotoAlgebralianX = 0;
 let terremotoAlgebralianY = 0;
 let terremotoDireccion = 1; // 1 -> Derecha, -1 -> Izquierda
-let terremotoVelocidad = 180;
+let terremotoVelocidad = 50;
+let tiempoInicioTerremoto = 0;
+let proximoSpawnPincho = 0;
 let gameOverTerremoto = false;
 
 // --- CONFIGURACIÓN DE ALGEBRALIANS ---
@@ -815,7 +818,7 @@ function ejecutarMinijuegoClimb(dt) {
   dibujarHUDMinijuego();
 }
 
-// --- LÓGICA MINIJUEGO TERREMOTO DEFORME ---
+// --- LÓGICA MINIJUEGO TERREMOTO DEFORME (MODIFICADO) ---
 function iniciarMinijuegoTerremoto() {
   estadoJuego = "MINIJUEGO_TERREMOTO";
   puntajeMinijuego = 0;
@@ -823,6 +826,9 @@ function iniciarMinijuegoTerremoto() {
   gameOverTerremoto = false;
   terremotoAlgebralianX = width * 0.1;
   terremotoDireccion = 1;
+  terremotoVelocidad = 50; // Inicia lento y acelera gradualmente
+  tiempoInicioTerremoto = millis();
+  proximoSpawnPincho = millis() + 5000; // Primeros 5 segundos sin pinchos
 
   let numPuntos = 20;
   terremotoPuntos = [];
@@ -838,14 +844,7 @@ function iniciarMinijuegoTerremoto() {
   }
 
   terremotoPinchos = [];
-  for (let i = 0; i < 4; i++) {
-    terremotoPinchos.push({
-      idx: floor(random(2, numPuntos - 2)),
-      fase: random(TWO_PI),
-      velocidad: random(2, 5),
-      activo: false
-    });
-  }
+  terremotoSenales = [];
 
   terremotoMonedas = [];
   for (let i = 0; i < 3; i++) {
@@ -880,12 +879,35 @@ function ejecutarMinijuegoTerremoto(dt) {
 
     fill(230);
     textSize(min(width, height) * 0.03);
-    text("¡Te pinchaste con los pinchos sísmicos!", width / 2, height * 0.42);
+    text("¡Chocaste con un pincho flotante!", width / 2, height * 0.42);
     text("Puntos conseguidos: " + floor(puntajeMinijuego), width / 2, height * 0.5);
     text("Monedas recolectadas: 🪙 " + monedasGanadasMinijuego, width / 2, height * 0.56);
 
     dibujarBotonSatisfactorio(width * 0.35, height * 0.72, width * 0.3, height * 0.08, "Aceptar", color(240, 90, 90), color(190, 60, 60));
     return;
+  }
+
+  let ahora = millis();
+  let tiempoTranscurrido = (ahora - tiempoInicioTerremoto) / 1000;
+
+  // Aceleración progresiva del Algebralian
+  terremotoVelocidad = 50 + tiempoTranscurrido * 12;
+
+  // Sistema de spawner para advertencias y pinchos
+  if (tiempoTranscurrido >= 5 && ahora >= proximoSpawnPincho) {
+    let xSpawn = random(width * 0.08, width * 0.92);
+    let dirY = random() < 0.5 ? 1 : -1; // 1: baja, -1: sube
+    
+    // Añadir señal de advertencia por 0.5s (500 ms)
+    terremotoSenales.push({
+      x: xSpawn,
+      dirY: dirY,
+      tiempoFin: ahora + 500
+    });
+
+    // Frecuencia de generación de pinchos progresivamente más rápida
+    let intervalo = max(600, 2200 - tiempoTranscurrido * 50);
+    proximoSpawnPincho = ahora + intervalo;
   }
 
   background(40, 25, 35);
@@ -923,23 +945,55 @@ function ejecutarMinijuegoTerremoto(dt) {
     line(p.x, p.y, p.x, height);
   }
 
-  let pasoX = width / (terremotoPuntos.length - 1);
-
-  // Pinchos
-  for (let pincho of terremotoPinchos) {
-    pincho.fase += pincho.velocidad * dt;
-    let offset = sin(pincho.fase) * 40;
-    let px = terremotoPuntos[pincho.idx].x;
-    let py = terremotoPuntos[pincho.idx].y - offset;
-
+  // Procesar señales de advertencia (duran 0.5 segundos)
+  for (let i = terremotoSenales.length - 1; i >= 0; i--) {
+    let s = terremotoSenales[i];
+    
+    // Dibujar señal
     noStroke();
-    fill(255, 80, 80);
-    triangle(px - 12, terremotoPuntos[pincho.idx].y, px + 12, terremotoPuntos[pincho.idx].y, px, py - 15);
+    fill(255, 200, 0);
+    textSize(min(width, height) * 0.04);
+    let yAdvertencia = s.dirY === 1 ? height * 0.08 : height * 0.92;
+    text("⚠️", s.x, yAdvertencia);
 
-    if (dist(terremotoAlgebralianX, terremotoAlgebralianY, px, py - 10) < 25) {
+    if (ahora >= s.tiempoFin) {
+      // Transformar la señal en un pincho flotante al finalizar los 0.5s
+      let yInicial = s.dirY === 1 ? -30 : height + 30;
+      let vySpeed = random(180, 320) * s.dirY;
+      terremotoPinchos.push({
+        x: s.x,
+        y: yInicial,
+        vy: vySpeed,
+        radio: min(width, height) * 0.025
+      });
+      terremotoSenales.splice(i, 1);
+    }
+  }
+
+  // Actualizar y dibujar Pinchos (Círculos Negros Flotantes)
+  for (let i = terremotoPinchos.length - 1; i >= 0; i--) {
+    let pincho = terremotoPinchos[i];
+    pincho.y += pincho.vy * dt;
+
+    // Dibujar Círculo Negro Flotante
+    noStroke();
+    fill(10);
+    ellipse(pincho.x, pincho.y, pincho.radio * 2, pincho.radio * 2);
+
+    // Brillo interior para acabado estético
+    fill(60);
+    ellipse(pincho.x - pincho.radio * 0.3, pincho.y - pincho.radio * 0.3, pincho.radio * 0.6, pincho.radio * 0.6);
+
+    // Detección de colisión con Algebralian
+    if (dist(terremotoAlgebralianX, terremotoAlgebralianY, pincho.x, pincho.y) < pincho.radio + 20) {
       gameOverTerremoto = true;
       guardarJuego();
       return;
+    }
+
+    // Borrar cuando sale de la pantalla por arriba o por abajo
+    if ((pincho.vy > 0 && pincho.y > height + 50) || (pincho.vy < 0 && pincho.y < -50)) {
+      terremotoPinchos.splice(i, 1);
     }
   }
 
