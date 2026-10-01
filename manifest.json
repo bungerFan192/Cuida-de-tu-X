@@ -1,0 +1,15 @@
+{
+  "short_name": "Algebralian",
+  "name": "make yoyr algebralian happy",
+  "icons": [
+    {
+      "src": "IMG_1331.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "black",
+  "background_color": "black"
+}
