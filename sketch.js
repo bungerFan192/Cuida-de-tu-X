@@ -552,27 +552,45 @@ function ejecutarMinijuegoNinja(dt) {
     return;
   }
 
+  // --- EFECTO VISUAL DE LUZ Y AMBIENTE ---
+  let tiempoActual = millis();
+
+  // Control de estados de la luz
+  if (estadoLuz === "APAGADA" && tiempoActual > temporizadorLuz) {
+    estadoLuz = "ADVERTENCIA";
+    advertenciaLuz = tiempoActual + 1000;
+  } else if (estadoLuz === "ADVERTENCIA" && tiempoActual > advertenciaLuz) {
+    estadoLuz = "ENCENDIDA";
+    temporizadorLuz = tiempoActual + 1500;
+  } else if (estadoLuz === "ENCENDIDA" && tiempoActual > temporizadorLuz) {
+    estadoLuz = "APAGADA";
+    temporizadorLuz = tiempoActual + random(3000, 4500);
+  }
+
+  // Iluminación del fondo según la luz
+  if (estadoLuz === "ENCENDIDA") {
+    // Fondo de reflectores iluminando la zona
+    background(240, 230, 180); 
+    fill(255, 250, 200, 120);
+    rect(0, 0, width, height);
+  } else if (estadoLuz === "ADVERTENCIA") {
+    // Parpadeo preventivo de advertencia
+    let parpadeo = sin(frameCount * 0.3) * 40;
+    background(50 + parpadeo, 40, 30);
+  } else {
+    // Modo sigilo / Oscuridad
+    background(18, 22, 34);
+  }
+
   let tamJugador = min(width, height) * 0.13;
   jugadorX = lerp(jugadorX, constrain(mouseX, tamJugador / 2, width - tamJugador / 2), 0.2);
   jugadorY = lerp(jugadorY, constrain(mouseY, height * 0.15, height - tamJugador / 2), 0.2);
-
-  let tiempoActual = millis();
-
-  if (estadoLuz === "APAGADA" && tiempoActual > temporizadorLuz) {
-    estadoLuz = "ADVERTENCIA";
-    advertenciaLuz = tiempoActual + 1500;
-  } else if (estadoLuz === "ADVERTENCIA" && tiempoActual > advertenciaLuz) {
-    estadoLuz = "ENCENDIDA";
-    temporizadorLuz = tiempoActual + 3000;
-  } else if (estadoLuz === "ENCENDIDA" && tiempoActual > temporizadorLuz) {
-    estadoLuz = "APAGADA";
-    temporizadorLuz = tiempoActual + random(5000, 8000);
-  }
 
   if (frameCount % 45 === 0) {
     objetos.push({ x: random(width * 0.1, width * 0.9), y: random(height * 0.2, height * 0.85), vida: 160 });
   }
 
+  // Dibujar Paredes
   for (let p of paredes) {
     if (frameCount > p.tiempoCambio) {
       p.targetX = random(width * 0.15, width * 0.85);
@@ -589,6 +607,7 @@ function ejecutarMinijuegoNinja(dt) {
     text("🪵", p.x, p.y);
   }
 
+  // Comprobar si está protegido tras alguna pared
   let aSalvo = false;
   for (let p of paredes) {
     if (abs(jugadorX - p.x) < p.w / 2 && abs(jugadorY - p.y) < p.h / 2) {
@@ -598,6 +617,7 @@ function ejecutarMinijuegoNinja(dt) {
     }
   }
 
+  // Detección cuando la luz está prendida
   if (estadoLuz === "ENCENDIDA" && !aSalvo) {
     margenDeVida += dt;
     if (margenDeVida > 0.08) {
@@ -607,14 +627,16 @@ function ejecutarMinijuegoNinja(dt) {
     }
   }
 
+  // Dibujar personaje
   if (imagenPersonaje) {
     push();
     let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
-    if (aSalvo) tint(255, 170);
+    if (aSalvo) tint(255, 170); // Ligera transparencia tras el muro
     image(imgFinal, jugadorX, jugadorY, tamJugador, tamJugador);
     pop();
   }
 
+  // Monedas / Ítems
   for (let i = objetos.length - 1; i >= 0; i--) {
     let obj = objetos[i];
     obj.vida -= (60 * dt);
@@ -630,6 +652,7 @@ function ejecutarMinijuegoNinja(dt) {
     if (obj.vida <= 0) objetos.splice(i, 1);
   }
 
+  // Mensaje de Advertencia o Acumulación de Puntos
   if (estadoLuz === "ADVERTENCIA") {
     fill(255, 220, 100);
     textSize(min(width, height) * 0.03);
