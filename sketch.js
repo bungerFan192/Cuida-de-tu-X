@@ -838,7 +838,7 @@ function iniciarMinijuegoTerremoto() {
   tiempoInicioTerremoto = millis();
   proximoSpawnPincho = millis() + 5000; // Primeros 5 segundos sin pinchos
 
-  let numPuntos = 20;
+  let numPuntos = 5;
   terremotoPuntos = [];
   let baseHeight = height * 0.55;
   let pasoX = width / (numPuntos - 1);
