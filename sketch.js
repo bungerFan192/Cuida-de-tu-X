@@ -1358,8 +1358,16 @@ function dibujarHUDMinijuego() {
   let txtP = estadoJuego === "MINIJUEGO_CLIMB" ? "Plataforma: #" + maxPlataformaAlcanzada : "Puntos: " + floor(puntajeMinijuego);
   text(txtP, width * 0.2, height * 0.05);
   text("🪙 + " + monedasGanadasMinijuego, width * 0.5, height * 0.05);
-  dibujarBotonSatisfactorio(width / 2 - 40, height * 0.08, 80, 30, "Salir", color(240, 80, 80), color(180, 50, 50));
+
+  // Botón "Salir" centrado responsivo
+  let btnW = min(width, height) * 0.18;
+  let btnH = min(width, height) * 0.06;
+  let btnX = width * 0.82 - btnW / 2;
+  let btnY = height * 0.03;
+
+  dibujarBotonSatisfactorio(btnX, btnY, btnW, btnH, "Salir", color(240, 80, 80), color(180, 50, 50));
 }
+
 
 function dibujarTienda() {
   background(26, 30, 44);
@@ -1881,12 +1889,18 @@ function mousePressed() {
       if (colisionCaja(width * 0.14, height * 0.58, cardW, cardH)) enviarDesafioDuelo(objetivo.idJugador, "CLIMB");
     }
     if (colisionCaja(width * 0.35, height * 0.82, width * 0.3, height * 0.08)) estadoJuego = "GUARDERIA";
-
   } else if (estadoJuego === "MINIJUEGO_GALLETAS" || estadoJuego === "MINIJUEGO_NINJA" || estadoJuego === "MINIJUEGO_CLIMB") {
     if (gameOverGalletas || gameOverNinja || gameOverClimb) {
       if (colisionCaja(width * 0.35, height * 0.72, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
     } else {
-      if (colisionCaja(width / 2 - 40, height * 0.08, 80, 30)) {
+      // Coordenadas exactas matching a dibujarHUDMinijuego con margen de tolerancia (+10px)
+      let btnW = min(width, height) * 0.18;
+      let btnH = min(width, height) * 0.06;
+      let btnX = width * 0.82 - btnW / 2;
+      let btnY = height * 0.03;
+
+      // Evaluamos con un margen expandido de 10px para que el clic sea 100% consistente
+      if (mouseX >= btnX - 10 && mouseX <= btnX + btnW + 10 && mouseY >= btnY - 10 && mouseY <= btnY + btnH + 10) {
         guardarJuego();
         estadoJuego = "PRINCIPAL";
       }
