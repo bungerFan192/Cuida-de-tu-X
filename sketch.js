@@ -1011,7 +1011,7 @@ function ejecutarMinijuegoGalletas(dt) {
 
   aceleracionGalletas += 0.02 * dt;
 
-  if (frameCount % 30 === 0) {
+  if (frameCount % 10 === 0) {
     let azar = random(1);
     let tipoObjeto = "GALLETA";
     if (azar < 0.25) tipoObjeto = "BOMBA";
@@ -1057,6 +1057,8 @@ function ejecutarMinijuegoGalletas(dt) {
   dibujarHUDMinijuego();
 }
 
+let margenDeVida = 0;
+
 function iniciarMinijuegoNinja() {
   estadoJuego = "MINIJUEGO_NINJA";
   objetos = [];
@@ -1068,7 +1070,7 @@ function iniciarMinijuegoNinja() {
   gameOverNinja = false;
   estadoLuz = "APAGADA";
   temporizadorLuz = millis() + random(4000, 7000);
-
+  margenDeVida = 0;
   paredes = [
     { x: width * 0.3, y: height * 0.4, targetX: width * 0.3, targetY: height * 0.4, w: width * 0.18, h: height * 0.18, tiempoCambio: 0 },
     { x: width * 0.7, y: height * 0.7, targetX: width * 0.7, targetY: height * 0.7, w: width * 0.18, h: height * 0.18, tiempoCambio: 0 }
@@ -1143,14 +1145,18 @@ function ejecutarMinijuegoNinja(dt) {
   for (let p of paredes) {
     if (abs(jugadorX - p.x) < p.w / 2 && abs(jugadorY - p.y) < p.h / 2) {
       aSalvo = true;
+      margenDeVida = 0;
       break;
     }
   }
 
   if (estadoLuz === "ENCENDIDA" && !aSalvo) {
+    margenDeVida += deltaTime;
+    if (margenDeVida > 0.07) {
     gameOverNinja = true;
     guardarJuego();
     return;
+    }
   }
 
   if (imagenPersonaje) {
