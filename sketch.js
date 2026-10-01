@@ -130,7 +130,8 @@ function obtenerImagenPersonaje(url) {
     cacheImagenes[url] = loadImage(url);
   }
   return cacheImagenes[url];
-  
+} // <-- CORREGIDO: Se agregó la llave faltante aquí
+
 function obtenerImagenTintada(img, tinte, umbralNegro = 30, umbralBlanco = 225) {
   if (!img || !tinte) return img;
 
@@ -154,7 +155,7 @@ function obtenerImagenTintada(img, tinte, umbralNegro = 30, umbralBlanco = 225) 
 
     if (a === 0) continue;
 
-        // Un píxel se considera blanco si TODOS sus canales están muy cerca del blanco puro (255)
+    // Un píxel se considera blanco si TODOS sus canales están muy cerca del blanco puro (255)
     let esBlancoPuro = (r >= umbralBlanco && g >= umbralBlanco && b >= umbralBlanco);
     let esNegroPuro = (r <= umbralNegro && g <= umbralNegro && b <= umbralNegro);
 
@@ -399,7 +400,7 @@ function iniciarDuelo(idRival, tipoMinijuego) {
       miEstadoCompartido.objetosRed = [{
         id: random(100000),
         x: width / 2,
-        y: height * 0.2,
+        y: height * 0.3,
         vx: random(-150, 150),
         vy: 250,
         ultimoGolpe: null
@@ -465,7 +466,6 @@ function ejecutarSalaDuelo1v1(dt) {
   }
 
   if (tipoDueloSeleccionado === "GALLETAS") {
-    // Jugador Local: Abajo | Jugador Rival: Arriba
     jugadorX = constrain(mouseX, 40, width - 40);
     jugadorY = height * 0.82;
     rivalX = rivalData.posXDuelo || width / 2;
@@ -526,7 +526,6 @@ function ejecutarSalaDuelo1v1(dt) {
     guardarJuego();
   }
 
-  // --- LÓGICA DE DUELO EN RED SEGÚN EL ROL ---
   if (esHostDuelo) {
     let tiempoActual = millis();
 
@@ -602,7 +601,6 @@ function ejecutarSalaDuelo1v1(dt) {
     }
   }
 
-  // --- RENDERIZADO DEL DUELO CLIMB ---
   if (tipoDueloSeleccionado === "CLIMB") {
     let platsRed = hostData.plataformasRed || [];
     let tamJ = min(width, height) * 0.12;
@@ -796,7 +794,6 @@ function dibujarPantallaPrincipal() {
     fill(0, 80);
     ellipse(0, tam * 0.45, tam * 0.7, tam * 0.15);
 
-    // Aplicar tinte especial si está equipado
     let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
     image(imgFinal, 0, 0, tam, tam);
 
@@ -980,7 +977,7 @@ function iniciarMinijuegoGalletas() {
   puntajeMinijuego = 0;
   monedasGanadasMinijuego = 0;
   jugadorX = width / 2;
-  jugadorY = height * 0.82; // Fijo abajo en modo normal
+  jugadorY = height * 0.82;
   comidaArrastrando = null;
   gameOverGalletas = false;
   aceleracionGalletas = 1.0;
@@ -1006,7 +1003,7 @@ function ejecutarMinijuegoGalletas(dt) {
 
   background(35, 30, 45);
   jugadorX = constrain(mouseX, 40, width - 40);
-  jugadorY = height * 0.82; // Posición fija abajo en modo 1 solo jugador
+  jugadorY = height * 0.82;
 
   aceleracionGalletas += 0.02 * dt;
 
@@ -1423,7 +1420,6 @@ function dibujarItemTienda(y, emoji, nombre, precioTexto) {
   pop();
 }
 
-// --- MENÚ DE SELECCIÓN Y PREVISUALIZACIÓN DE TINTES ---
 function abrirMenuTintes() {
   tintePrevisualizado = colorTinte ? [...colorTinte] : null;
   estadoJuego = "MENU_TINTES";
@@ -1442,7 +1438,6 @@ function dibujarMenuSeleccionTintes() {
   fill(170, 180, 205);
   text("Selecciona un color para previsualizar la apariencia", width / 2, height * 0.13);
 
-  // --- PREVISUALIZACIÓN CENTRAL DE TU ALGEBRALIAN ---
   let prevX = width / 2;
   let prevY = height * 0.32;
   let tam = min(width, height) * 0.28;
@@ -1474,7 +1469,6 @@ function dibujarMenuSeleccionTintes() {
   }
   pop();
 
-  // Nombre del color seleccionado
   let nombreColor = "SIN TINTE (Original)";
   if (tintePrevisualizado) {
     let encontrado = PALETA_TINTES.find(t => t.color[0] === tintePrevisualizado[0] && t.color[1] === tintePrevisualizado[1] && t.color[2] === tintePrevisualizado[2]);
@@ -1485,7 +1479,6 @@ function dibujarMenuSeleccionTintes() {
   textStyle(BOLD);
   text("Color: " + nombreColor, width / 2, height * 0.51);
 
-  // --- PALETA EN CUADRÍCULA ---
   let cols = 4;
   let btnW = width * 0.18;
   let btnH = height * 0.065;
@@ -1508,7 +1501,6 @@ function dibujarMenuSeleccionTintes() {
     let colBtn = color(c[0], c[1], c[2]);
     let colSombra = color(max(0, c[0] - 50), max(0, c[1] - 50), max(0, c[2] - 50));
 
-    // Resaltar si está seleccionado en la previsualización
     let seleccionado = tintePrevisualizado && tintePrevisualizado[0] === c[0] && tintePrevisualizado[1] === c[1] && tintePrevisualizado[2] === c[2];
     if (seleccionado) {
       stroke(255, 230, 80);
@@ -1520,7 +1512,6 @@ function dibujarMenuSeleccionTintes() {
     dibujarBotonSatisfactorio(bx, by, btnW, btnH, item.nombre, colBtn, colSombra);
   }
 
-  // --- BOTONES INFERIORES ---
   let bW = width * 0.25;
   let bH = height * 0.075;
   let bY = height * 0.82;
@@ -1541,7 +1532,6 @@ function manejarClickMenuTintes() {
   let startX = width / 2 - totalW / 2;
   let startY = height * 0.56;
 
-  // Selección de color de la paleta
   for (let i = 0; i < PALETA_TINTES.length; i++) {
     let colIndex = i % cols;
     let rowIndex = floor(i / cols);
@@ -1559,19 +1549,16 @@ function manejarClickMenuTintes() {
   let bH = height * 0.075;
   let bY = height * 0.82;
 
-  // Botón Quitar Tinte
   if (colisionCaja(width * 0.08, bY, bW, bH)) {
     tintePrevisualizado = null;
   }
 
-  // Botón Guardar Tinte
   if (colisionCaja(width * 0.375, bY, bW, bH)) {
     colorTinte = tintePrevisualizado;
     guardarJuego();
     estadoJuego = "TIENDA";
   }
 
-  // Botón Cancelar
   if (colisionCaja(width * 0.67, bY, bW, bH)) {
     estadoJuego = "TIENDA";
   }
@@ -1743,6 +1730,7 @@ function manejarClickTeclado() {
   let startY = height * 0.38;
   let keyH = height * 0.08;
 
+  // Clics en la rejilla de teclas
   for (let r = 0; r < filas.length; r++) {
     let fila = filas[r];
     let keyW = (width * 0.78) / fila.length;
@@ -1764,217 +1752,28 @@ function manejarClickTeclado() {
         } else if (charKey === "ABC") {
           modoNumerosTeclado = false;
         } else {
-          if (textoNuevoNombre.length < 14) textoNuevoNombre += charKey;
+          if (textoNuevoNombre.length < 15) {
+            textoNuevoNombre += charKey;
+          }
         }
         return;
       }
     }
   }
 
+  // Botón Guardar
   if (colisionCaja(width * 0.18, height * 0.74, width * 0.3, height * 0.08)) {
-    if (textoNuevoNombre.trim() !== "") {
+    if (textoNuevoNombre.trim().length > 0) {
       nombreUsuario = textoNuevoNombre.trim();
       guardarJuego();
     }
     mostrandoTecladoNombre = false;
+    return;
   }
 
+  // Botón Cancelar
   if (colisionCaja(width * 0.52, height * 0.74, width * 0.3, height * 0.08)) {
     mostrandoTecladoNombre = false;
-  }
-}
-
-function mousePressed() {
-  if (mostrandoTecladoNombre) {
-    manejarClickTeclado();
     return;
   }
-
-  if (estadoJuego === "MENU_TINTES") {
-    manejarClickMenuTintes();
-    return;
-  }
-
-  intentarSuperSaltoClimb();
-
-  if (miEstadoCompartido && miEstadoCompartido.retoRecibido && estadoJuego !== "SALA_DUELO" && estadoJuego !== "ESPERANDO_RESPUESTA_DUELO") {
-    let infoReto = miEstadoCompartido.retoRecibido;
-
-    if (colisionCaja(width * 0.22, height * 0.58, width * 0.26, height * 0.08)) {
-      miEstadoCompartido.retoRecibido = null;
-      iniciarDuelo(infoReto.deId, infoReto.tipoMinijuego || "GALLETAS");
-      return;
-    }
-    if (colisionCaja(width * 0.52, height * 0.58, width * 0.26, height * 0.08)) {
-      miEstadoCompartido.retoRecibido = null;
-      return;
-    }
-  }
-
-  if (estadoJuego === "ESPERANDO_RESPUESTA_DUELO") {
-    let rivalData = listaJugadores.find(p => p.idJugador === idRivalDuelo);
-    if (!rivalData) {
-      if (colisionCaja(width * 0.35, height * 0.60, width * 0.3, height * 0.08)) {
-        miEstadoCompartido.estadoDuelo = "LIBRE";
-        estadoJuego = "GUARDERIA";
-        return;
-      }
-    } else {
-      if (colisionCaja(width * 0.35, height * 0.65, width * 0.3, height * 0.08)) {
-        miEstadoCompartido.estadoDuelo = "LIBRE";
-        estadoJuego = "GUARDERIA";
-        return;
-      }
-    }
-  }
-
-  if (estadoJuego === "SALA_DUELO") {
-    let rivalData = listaJugadores.find(p => p.idJugador === idRivalDuelo);
-    if (!rivalData && colisionCaja(width * 0.35, height * 0.60, width * 0.3, height * 0.08)) {
-      miEstadoCompartido.estadoDuelo = "LIBRE";
-      estadoJuego = "GUARDERIA";
-      return;
-    }
-  }
-
-  let btnW = width * 0.17;
-  let btnH = height * 0.08;
-  let btnY = height * 0.88;
-
-  if (estadoJuego === "PRINCIPAL") {
-    if (colisionCaja(width * 0.02, btnY, btnW, btnH)) {
-      if (inventarioComida.manzana > 0) comidaArrastrando = "manzana";
-      else if (inventarioComida.pizza > 0) comidaArrastrando = "pizza";
-      else if (inventarioComida.pastel > 0) comidaArrastrando = "pastel";
-    }
-    if (colisionCaja(width * 0.21, btnY, btnW, btnH)) {
-      energia = min(100, energia + 30);
-      guardarJuego();
-    }
-    if (colisionCaja(width * 0.40, btnY, btnW, btnH)) estadoJuego = "MENU_MINIJUEGOS";
-    if (colisionCaja(width * 0.59, btnY, btnW, btnH)) estadoJuego = "TIENDA";
-    if (colisionCaja(width * 0.78, btnY, btnW, btnH)) estadoJuego = "GUARDERIA";
-
-  } else if (estadoJuego === "MENU_MINIJUEGOS") {
-    let cardW = width * 0.72, cardH = height * 0.19;
-
-    if (colisionCaja(width * 0.14, height * 0.16, cardW, cardH)) iniciarMinijuegoGalletas();
-    if (colisionCaja(width * 0.14, height * 0.37, cardW, cardH)) iniciarMinijuegoNinja();
-    if (colisionCaja(width * 0.14, height * 0.58, cardW, cardH)) iniciarMinijuegoClimb();
-    if (colisionCaja(width * 0.35, height * 0.82, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
-
-  } else if (estadoJuego === "MENU_SELECCION_RETOS") {
-    let cardW = width * 0.72, cardH = height * 0.19;
-    let otrosJugadores = listaJugadores.filter(p => p.idJugador !== miEstadoCompartido.idJugador);
-    let objetivo = otrosJugadores[indiceGuarderia];
-
-    if (objetivo) {
-      if (colisionCaja(width * 0.14, height * 0.16, cardW, cardH)) enviarDesafioDuelo(objetivo.idJugador, "GALLETAS");
-      if (colisionCaja(width * 0.14, height * 0.37, cardW, cardH)) enviarDesafioDuelo(objetivo.idJugador, "NINJA");
-      if (colisionCaja(width * 0.14, height * 0.58, cardW, cardH)) enviarDesafioDuelo(objetivo.idJugador, "CLIMB");
-    }
-    if (colisionCaja(width * 0.35, height * 0.82, width * 0.3, height * 0.08)) estadoJuego = "GUARDERIA";
-
-  } else if (estadoJuego === "MINIJUEGO_GALLETAS" || estadoJuego === "MINIJUEGO_NINJA" || estadoJuego === "MINIJUEGO_CLIMB") {
-    if (gameOverGalletas || gameOverNinja || gameOverClimb) {
-      if (colisionCaja(width * 0.35, height * 0.72, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
-    } else {
-      if (colisionCaja(width / 2 - 40, height * 0.08, 80, 30)) {
-        guardarJuego();
-        estadoJuego = "PRINCIPAL";
-      }
-    }
-  } else if (estadoJuego === "SALA_DUELO") {
-    if (finDelDuelo && colisionCaja(width * 0.35, height * 0.68, width * 0.3, height * 0.08)) {
-      miEstadoCompartido.estadoDuelo = "LIBRE";
-      estadoJuego = "PRINCIPAL";
-    }
-  } else if (estadoJuego === "TIENDA") {
-    let pW = width * 0.35, pH = height * 0.06;
-
-    if (colisionCaja(width * 0.12, height * 0.17, pW, pH)) pestanaTienda = "COMIDA";
-    if (colisionCaja(width * 0.53, height * 0.17, pW, pH)) pestanaTienda = "DECORACION";
-
-    let btnX = width * 0.63, btnWItem = width * 0.24, btnHItem = height * 0.055;
-
-    if (pestanaTienda === "COMIDA") {
-      if (colisionCaja(btnX, height * 0.25 + height * 0.032, btnWItem, btnHItem) && monedas >= 10) { monedas -= 10; inventarioComida.manzana++; guardarJuego(); }
-      if (colisionCaja(btnX, height * 0.40 + height * 0.032, btnWItem, btnHItem) && monedas >= 20) { monedas -= 20; inventarioComida.pizza++; guardarJuego(); }
-      if (colisionCaja(btnX, height * 0.55 + height * 0.032, btnWItem, btnHItem) && monedas >= 35) { monedas -= 35; inventarioComida.pastel++; guardarJuego(); }
-    } else if (pestanaTienda === "DECORACION") {
-      // Gorro Casual
-      if (colisionCaja(btnX, height * 0.25 + height * 0.032, btnWItem, btnHItem)) {
-        let poseoGorro = decoracionesCompradas.includes("GORRO");
-        if (!poseoGorro && monedas >= 30) {
-          monedas -= 30;
-          decoracionesCompradas.push("GORRO");
-          decoracionEquipada = "GORRO";
-        } else if (poseoGorro) {
-          decoracionEquipada = (decoracionEquipada === "GORRO") ? null : "GORRO";
-        }
-        guardarJuego();
-      }
-      // Sombrero Elegante
-      if (colisionCaja(btnX, height * 0.39 + height * 0.032, btnWItem, btnHItem)) {
-        let poseoSombrero = decoracionesCompradas.includes("SOMBRERO");
-        if (!poseoSombrero && monedas >= 50) {
-          monedas -= 50;
-          decoracionesCompradas.push("SOMBRERO");
-          decoracionEquipada = "SOMBRERO";
-        } else if (poseoSombrero) {
-          decoracionEquipada = (decoracionEquipada === "SOMBRERO") ? null : "SOMBRERO";
-        }
-        guardarJuego();
-      }
-      // Corona Real
-      if (colisionCaja(btnX, height * 0.53 + height * 0.032, btnWItem, btnHItem)) {
-        let poseoCorona = decoracionesCompradas.includes("CORONA");
-        if (!poseoCorona && monedas >= 100) {
-          monedas -= 100;
-          decoracionesCompradas.push("CORONA");
-          decoracionEquipada = "CORONA";
-        } else if (poseoCorona) {
-          decoracionEquipada = (decoracionEquipada === "CORONA") ? null : "CORONA";
-        }
-        guardarJuego();
-      }
-      // Tinte Especial
-      if (colisionCaja(btnX, height * 0.67 + height * 0.032, btnWItem, btnHItem)) {
-        let poseoTinte = decoracionesCompradas.includes("TINTE");
-        if (!poseoTinte && monedas >= 40) {
-          monedas -= 40;
-          decoracionesCompradas.push("TINTE");
-          abrirMenuTintes();
-        } else if (poseoTinte) {
-          abrirMenuTintes();
-        }
-        guardarJuego();
-      }
-    }
-
-    if (colisionCaja(width * 0.35, height * 0.83, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
-
-  } else if (estadoJuego === "GUARDERIA") {
-    let otrosJugadores = listaJugadores.filter(p => p.idJugador !== miEstadoCompartido.idJugador);
-
-    if (colisionCaja(width * 0.03, height * 0.08, width * 0.22, height * 0.05)) {
-      textoNuevoNombre = nombreUsuario;
-      mostrandoTecladoNombre = true;
-      return;
-    }
-
-    if (otrosJugadores.length > 0) {
-      if (colisionCaja(width * 0.05, height * 0.42, width * 0.08, height * 0.1)) {
-        indiceGuarderia = (indiceGuarderia - 1 + otrosJugadores.length) % otrosJugadores.length;
-      }
-      if (colisionCaja(width * 0.87, height * 0.42, width * 0.08, height * 0.1)) {
-        indiceGuarderia = (indiceGuarderia + 1) % otrosJugadores.length;
-      }
-      if (colisionCaja(width * 0.25, height * 0.65, width * 0.5, height * 0.07)) {
-        estadoJuego = "MENU_SELECCION_RETOS";
-      }
-    }
-
-    if (colisionCaja(width * 0.35, height * 0.82, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
-  }
-}
+} // <-- CORREGIDO: Lógica de teclado completada y cerrada correctamente.
