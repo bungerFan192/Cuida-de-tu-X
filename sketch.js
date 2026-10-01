@@ -161,9 +161,9 @@ function obtenerImagenTintada(img, tinte, umbralNegro = 30, umbralBlanco = 225) 
 
     // Modificar el color solo si no es negro ni blanco puro
     if (!esNegroPuro && !esBlancoPuro) {
-      imgProcesada.pixels[i] = r * tr;
-      imgProcesada.pixels[i + 1] = g * tg;
-      imgProcesada.pixels[i + 2] = b * tb;
+      imgProcesada.pixels[i] = tr;
+      imgProcesada.pixels[i + 1] = tg;
+      imgProcesada.pixels[i + 2] = tb;
     }
   }
 
