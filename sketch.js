@@ -132,7 +132,7 @@ function obtenerImagenPersonaje(url) {
   return cacheImagenes[url];
 }
 
-function obtenerImagenTintada(img, tinte, umbralNegro = 80, umbralBlanco = 235) {
+function obtenerImagenTintada(img, tinte, umbralNegro = 80, umbralBlanco = 195) {
   if (!img || !tinte) return img;
 
   let claveCache = img.canvas ? img.canvas.toDataURL() + "_" + tinte.join(",") : tinte.join(",");
