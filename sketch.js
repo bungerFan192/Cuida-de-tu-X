@@ -91,8 +91,8 @@ let gameOverClimb = false;
 
 // --- CONFIGURACIÓN DE ALGEBRALIANS ---
 const ALGEBRALIANS = [
-  { nombre: "X", url: "164.webp" }, 
-  { nombre: "Four", url: "164 (1).webp" }
+  { nombre: "X", url: "https://static.wikia.nocookie.net/battlefordreamisland/images/f/f2/X_being_happy.png/revision/latest/scale-to-width-down/164" }, 
+  { nombre: "Four", url: "https://static.wikia.nocookie.net/character-stats-and-profiles/images/6/6c/PastTPOT20Four.png/revision/latest/scale-to-width-down/164" }
 ];
 
 let miAlgebralian = null;
@@ -463,6 +463,7 @@ function ejecutarSalaDuelo1v1(dt) {
   }
 
   if (tipoDueloSeleccionado === "GALLETAS") {
+    // Jugador Local: Abajo | Jugador Rival: Arriba
     jugadorX = constrain(mouseX, 40, width - 40);
     jugadorY = height * 0.82;
     rivalX = rivalData.posXDuelo || width / 2;
@@ -977,6 +978,7 @@ function iniciarMinijuegoGalletas() {
   puntajeMinijuego = 0;
   monedasGanadasMinijuego = 0;
   jugadorX = width / 2;
+  jugadorY = height * 0.82; // Fijo abajo en modo normal
   comidaArrastrando = null;
   gameOverGalletas = false;
   aceleracionGalletas = 1.0;
@@ -1002,6 +1004,7 @@ function ejecutarMinijuegoGalletas(dt) {
 
   background(35, 30, 45);
   jugadorX = constrain(mouseX, 40, width - 40);
+  jugadorY = height * 0.82; // Posición fija abajo en modo 1 solo jugador
 
   aceleracionGalletas += 0.02 * dt;
 
@@ -1022,7 +1025,7 @@ function ejecutarMinijuegoGalletas(dt) {
     else if (obj.tipo === "MONEDA") text("🪙", obj.x, obj.y);
     else text("💣", obj.x, obj.y);
 
-    if (dist(obj.x, obj.y, jugadorX, height * 0.82) < min(width, height) * 0.08) {
+    if (dist(obj.x, obj.y, jugadorX, jugadorY) < min(width, height) * 0.08) {
       if (obj.tipo === "GALLETA") {
         puntajeMinijuego += 10;
         felicidad = min(100, felicidad + 5);
