@@ -1,31 +1,35 @@
-// --- VARIABLES DE MULTIJUGADOR (p5.party) ---
+// ==========================================
+// ALGEBRALIAN POU - CORRECCIÓN DE BOTONES 🌿✨
+// ==========================================
+
+// --- MULTIJUGADOR ---
 let miEstadoCompartido;
 let listaJugadores;
 let nombreUsuario;
 
-// Cache para almacenar imágenes de otros jugadores según su URL
+// Cache optimizada de imágenes teñidas
 let cacheImagenes = {};
-let cacheImagenesTintadas = {};
+let cacheGraficosTintados = {}; 
 
-// --- BARRAS DE ESTADO Y MONEDAS ---
+// --- BARRAS DE ESTADO Y ECONOMÍA ---
 let hambre = 100;
 let energia = 100;
 let felicidad = 100;
 let monedas = 0;
 
-// Desgaste estilo Pou (por segundo)
-const DESGASTE_HAMBRE_POR_SEG = 100 / (12 * 3600);   // ~12 Horas
-const DESGASTE_ENERGIA_POR_SEG = 100 / (18 * 3600);  // ~18 Horas
-const DESGASTE_FELICIDAD_POR_SEG = 100 / (24 * 3600); // ~24 Horas
+// Desgaste equilibrado y relajado
+const DESGASTE_HAMBRE_POR_SEG = 100 / (12 * 3600);
+const DESGASTE_ENERGIA_POR_SEG = 100 / (18 * 3600);
+const DESGASTE_FELICIDAD_POR_SEG = 100 / (24 * 3600);
 
-// --- INVENTARIO DE COMIDA Y DECORACIONES ---
+// --- INVENTARIO Y DECORACIÓN ---
 let inventarioComida = { manzana: 0, pizza: 0, pastel: 0 };
 let decoracionEquipada = null; 
 let decoracionesCompradas = [];
-let colorTinte = null; // Guardará el color en formato [R, G, B] o null
-let tintePrevisualizado = null; // Guardará temporalmente el tinte seleccionado en el menú
+let colorTinte = null; 
+let tintePrevisualizado = null; 
 
-// Paleta de tintes disponibles
+// Paleta Relax Pastel
 const PALETA_TINTES = [
   { nombre: "ROJO", color: [235, 76, 52] },
   { nombre: "NARANJO", color: [235, 186, 52] },
@@ -37,32 +41,32 @@ const PALETA_TINTES = [
   { nombre: "ROSA", color: [211, 52, 235] }
 ];
 
-// --- ESTADOS DEL JUEGO ---
+// --- ESTADOS Y MENÚS ---
 let estadoJuego = "PRINCIPAL"; 
 let pestanaTienda = "COMIDA";
 
-// --- TECLADO CUSTOMIZADO PARA CAMBIO DE NOMBRE ---
+// TECLADO
 let mostrandoTecladoNombre = false;
 let textoNuevoNombre = "";
 let mayusculasTeclado = true;
 let modoNumerosTeclado = false;
 
-// --- GUARDERÍA ONLINE ---
+// GUARDERÍA
 let indiceGuarderia = 0;
 let mensajeGuarderia = "";
 
-// --- VARIABLES DE ALIMENTACIÓN INTERACTIVA ---
+// INTERACCIÓN ALIMENTOS
 let comidaArrastrando = null;
-let comidaX = 0, comidaY = 0;
 let comiendoAnimacion = 0;
 
-// --- VARIABLES DE MINIJUEGOS Y FÍSICAS ---
+// MINIJUEGOS Y AMBIENTE
+let partículasFondo = [];
 let jugadorX = 200, jugadorY = 200, jugadorVY = 0;
 let climbCamY = 0;
 let maxPlataformaAlcanzada = 0;
 
-const GRAVEDAD_CLIMB = 1100;
-const SALTO_CLIMB = -620;
+const GRAVEDAD_CLIMB = 1000;
+const SALTO_CLIMB = -600;
 
 let objetos = [];
 let paredes = [];
@@ -72,29 +76,25 @@ let temporizadorLuz = 0;
 let advertenciaLuz = 0;
 let puntajeMinijuego = 0;
 let monedasGanadasMinijuego = 0;
-let gameOverGalletas = false;
-let gameOverNinja = false;
-let gameOverClimb = false;
+let gameOverGalletas = false, gameOverNinja = false, gameOverClimb = false, gameOverTerremoto = false;
 
-// --- VARIABLES MINIJUEGO TERREMOTO DEFORME MODIFICADO ---
+// TERREMOTO DEFORME
 let terremotoPuntos = [];
 let terremotoPinchos = [];
 let terremotoSenales = [];
 let terremotoMonedas = [];
 let terremotoAlgebralianX = 0;
 let terremotoAlgebralianY = 0;
-let terremotoDireccion = 1; // 1 -> Derecha, -1 -> Izquierda
+let terremotoDireccion = 1;
 let terremotoVelocidad = 50;
 let tiempoInicioTerremoto = 0;
 let proximoSpawnPincho = 0;
-let gameOverTerremoto = false;
 
-// --- CONFIGURACIÓN DE ALGEBRALIANS ---
+// ALGEBRALIANS
 const ALGEBRALIANS = [
   { nombre: "X", url: "164.webp" }, 
   { nombre: "Four", url: "164 (1).webp" }
 ];
-
 let miAlgebralian = null;
 let imagenPersonaje = null;
 
@@ -115,11 +115,10 @@ function guardarJuego() {
     };
     localStorage.setItem("algebralian_guardado", JSON.stringify(datos));
   } catch (e) {
-    console.log("Error al guardar en localStorage", e);
+    console.log("Error al guardar:", e);
   }
 }
 
-// Helper global para evaluar colisión en recuadros (AABB)
 function colisionCaja(x, y, w, h) {
   return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
 }
@@ -132,42 +131,36 @@ function obtenerImagenPersonaje(url) {
   return cacheImagenes[url];
 }
 
-function obtenerImagenTintada(img, tinte, umbralNegro = 30, umbralBlanco = 248) {
-  if (!img || !tinte) return img;
+function obtenerImagenTintada(img, tinte) {
+  if (!img) return null;
+  if (!tinte) return img;
 
-  let claveCache = img.canvas ? img.canvas.toDataURL() + "_" + tinte.join(",") : tinte.join(",");
-  if (cacheImagenesTintadas[claveCache]) {
-    return cacheImagenesTintadas[claveCache];
+  let claveCache = (img.url || "img") + "_" + tinte.join(",");
+  if (cacheGraficosTintados[claveCache]) {
+    return cacheGraficosTintados[claveCache];
   }
 
-  let imgProcesada = img.get();
-  imgProcesada.loadPixels();
+  let pg = createGraphics(img.width, img.height);
+  pg.image(img, 0, 0);
+  pg.loadPixels();
 
-  let tr = tinte[0] / 255;
-  let tg = tinte[1] / 255;
-  let tb = tinte[2] / 255;
+  let tr = tinte[0] / 255, tg = tinte[1] / 255, tb = tinte[2] / 255;
 
-  for (let i = 0; i < imgProcesada.pixels.length; i += 4) {
-    let r = imgProcesada.pixels[i];
-    let g = imgProcesada.pixels[i + 1];
-    let b = imgProcesada.pixels[i + 2];
-    let a = imgProcesada.pixels[i + 3];
+  for (let i = 0; i < pg.pixels.length; i += 4) {
+    let a = pg.pixels[i + 3];
+    if (a < 10) continue;
+    let r = pg.pixels[i], g = pg.pixels[i + 1], b = pg.pixels[i + 2];
+    
+    if ((r < 35 && g < 35 && b < 35) || (r > 245 && g > 245 && b > 245)) continue;
 
-    if (a === 0) continue;
-
-    let esBlancoPuro = (r >= umbralBlanco && g >= umbralBlanco && b >= umbralBlanco);
-    let esNegroPuro = (r <= umbralNegro && g <= umbralNegro && b <= umbralNegro);
-
-    if (!esNegroPuro && !esBlancoPuro) {
-      imgProcesada.pixels[i] = tr * 255;
-      imgProcesada.pixels[i + 1] = tg * 255;
-      imgProcesada.pixels[i + 2] = tb * 255;
-    }
+    pg.pixels[i] = r * tr;
+    pg.pixels[i + 1] = g * tg;
+    pg.pixels[i + 2] = b * tb;
   }
 
-  imgProcesada.updatePixels();
-  cacheImagenesTintadas[claveCache] = imgProcesada;
-  return imgProcesada;
+  pg.updatePixels();
+  cacheGraficosTintados[claveCache] = pg;
+  return pg;
 }
 
 function preload() {
@@ -182,34 +175,28 @@ function preload() {
       if (datos.energia !== undefined) energia = datos.energia;
       if (datos.felicidad !== undefined) felicidad = datos.felicidad;
       if (datos.monedas !== undefined) monedas = datos.monedas;
-      if (datos.inventarioComida !== undefined) inventarioComida = datos.inventarioComida;
+      if (datos.inventarioComida) inventarioComida = datos.inventarioComida;
       if (datos.decoracionEquipada !== undefined) decoracionEquipada = datos.decoracionEquipada;
-      if (datos.decoracionesCompradas !== undefined) decoracionesCompradas = datos.decoracionesCompradas;
-      if (datos.colorTinte !== undefined) colorTinte = datos.colorTinte;
+      if (datos.decoracionesCompradas) decoracionesCompradas = datos.decoracionesCompradas;
+      if (datos.colorTinte) colorTinte = datos.colorTinte;
 
       if (datos.ultimoAcceso) {
-        let segundosTranscurridos = (Date.now() - datos.ultimoAcceso) / 1000;
-        hambre = max(10, hambre - (segundosTranscurridos * DESGASTE_HAMBRE_POR_SEG));
-        energia = max(10, energia - (segundosTranscurridos * DESGASTE_ENERGIA_POR_SEG));
-        felicidad = max(10, felicidad - (segundosTranscurridos * DESGASTE_FELICIDAD_POR_SEG));
+        let segs = (Date.now() - datos.ultimoAcceso) / 1000;
+        hambre = max(10, hambre - (segs * DESGASTE_HAMBRE_POR_SEG));
+        energia = max(10, energia - (segs * DESGASTE_ENERGIA_POR_SEG));
+        felicidad = max(10, felicidad - (segs * DESGASTE_FELICIDAD_POR_SEG));
       }
     }
-  } catch (e) {
-    console.log("Error al leer localStorage", e);
-  }
+  } catch (e) {}
 
   if (!miAlgebralian || !miAlgebralian.nombre) {
     miAlgebralian = ALGEBRALIANS[floor(random(ALGEBRALIANS.length))];
-  } else {
-    let encontrado = ALGEBRALIANS.find(a => a.nombre === miAlgebralian.nombre);
-    if (encontrado) miAlgebralian.url = encontrado.url;
   }
 
   guardarJuego();
   imagenPersonaje = loadImage(miAlgebralian.url);
   
   partyConnect("wss://demoserver.p5party.org", "algebralian_pou_guarderia_v1");
-  
   miEstadoCompartido = partyLoadMyShared({
     idJugador: floor(random(1000, 9999)),
     nombreUsuario: nombreUsuario,
@@ -227,6 +214,16 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   textAlign(CENTER, CENTER);
   imageMode(CENTER);
+
+  for (let i = 0; i < 30; i++) {
+    partículasFondo.push({
+      x: random(width),
+      y: random(height),
+      tam: random(2, 6),
+      velY: random(0.2, 0.8),
+      alfa: random(80, 200)
+    });
+  }
 }
 
 function windowResized() {
@@ -238,30 +235,20 @@ function draw() {
   let dt = deltaTime / 1000; 
   if (isNaN(dt) || dt > 0.1) dt = 0.016;
 
-  if (!miAlgebralian || !miAlgebralian.nombre) {
-    background(20);
-    fill(255);
-    textSize(16);
-    text("Cargando Algebralian...", width / 2, height / 2);
-    return;
-  }
-
-  if (miEstadoCompartido) {
-    miEstadoCompartido.nombreUsuario = nombreUsuario;
-    miEstadoCompartido.nombre = miAlgebralian.nombre;
-    miEstadoCompartido.url = miAlgebralian.url;
-    miEstadoCompartido.decoracion = decoracionEquipada;
-    miEstadoCompartido.tinte = colorTinte;
-    miEstadoCompartido.hambre = hambre;
-    miEstadoCompartido.estado = hambre < 30 ? "Hambriento" : (energia < 30 ? "Con Sueño" : "Muy Feliz");
-  }
-
-  // Desgaste escalado por Delta Time
   hambre = max(0, hambre - (DESGASTE_HAMBRE_POR_SEG * dt * 60));
   energia = max(0, energia - (DESGASTE_ENERGIA_POR_SEG * dt * 60));
   felicidad = max(0, felicidad - (DESGASTE_FELICIDAD_POR_SEG * dt * 60));
   
-  if (frameCount % 60 === 0) guardarJuego();
+  if (frameCount % 120 === 0) guardarJuego();
+
+  if (miEstadoCompartido) {
+    miEstadoCompartido.nombreUsuario = nombreUsuario;
+    miEstadoCompartido.decoracion = decoracionEquipada;
+    miEstadoCompartido.tinte = colorTinte;
+    miEstadoCompartido.hambre = hambre;
+  }
+
+  dibujarFondoRelax(dt);
 
   switch (estadoJuego) {
     case "PRINCIPAL": dibujarPantallaPrincipal(); break;
@@ -275,31 +262,41 @@ function draw() {
     case "GUARDERIA": dibujarGuarderiaOnline(); break;
   }
 
-  if (mostrandoTecladoNombre) {
-    dibujarTecladoCustomizado();
+  if (mostrandoTecladoNombre) dibujarTecladoCustomizado();
+}
+
+function dibujarFondoRelax(dt) {
+  background(22, 26, 42);
+  noStroke();
+  
+  for (let p of partículasFondo) {
+    p.y -= p.velY;
+    if (p.y < 0) p.y = height;
+    fill(255, 255, 230, p.alfa * 0.5);
+    ellipse(p.x, p.y, p.tam);
   }
 }
 
 function dibujarPantallaPrincipal() {
-  background(28, 32, 48);
   dibujarHUD();
 
   let posX = width / 2;
-  let posY = height * 0.50;
+  let posY = height * 0.52;
 
   if (imagenPersonaje) {
-    let jitter = (hambre < 30 || energia < 30 || felicidad < 30) ? random(-2, 2) : 0;
+    let respiracion = sin(frameCount * 0.05) * 6;
     let escalaEfecto = (comiendoAnimacion > 0) ? 1.15 : 1.0;
-    let tam = min(width, height) * 0.35;
+    let tam = min(width, height) * 0.34 + respiracion;
     
     if (comiendoAnimacion > 0) comiendoAnimacion--;
 
     push();
-    translate(posX + jitter, posY);
+    translate(posX, posY);
     scale(escalaEfecto);
+
     noStroke();
-    fill(0, 80);
-    ellipse(0, tam * 0.45, tam * 0.7, tam * 0.15);
+    fill(10, 15, 28, 120);
+    ellipse(0, tam * 0.42, tam * 0.65, tam * 0.15);
 
     let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
     image(imgFinal, 0, 0, tam, tam);
@@ -318,23 +315,20 @@ function dibujarPantallaPrincipal() {
   }
 
   if (comidaArrastrando) {
-    comidaX = mouseX;
-    comidaY = mouseY;
-    textSize(45);
+    textSize(50);
     let emoji = comidaArrastrando === "manzana" ? "🍎" : (comidaArrastrando === "pizza" ? "🍕" : "🎂");
-    text(emoji, comidaX, comidaY);
+    text(emoji, mouseX, mouseY);
 
-    if (dist(comidaX, comidaY, posX, posY) < min(width, height) * 0.15) {
+    if (dist(mouseX, mouseY, posX, posY) < min(width, height) * 0.16) {
       if (comidaArrastrando === "manzana") hambre = min(100, hambre + 25);
       else if (comidaArrastrando === "pizza") hambre = min(100, hambre + 50);
       else if (comidaArrastrando === "pastel") {
         hambre = min(100, hambre + 80);
         felicidad = min(100, felicidad + 10);
       }
-
       inventarioComida[comidaArrastrando]--;
       comidaArrastrando = null;
-      comiendoAnimacion = 15;
+      comiendoAnimacion = 18;
       guardarJuego();
     }
   }
@@ -343,24 +337,24 @@ function dibujarPantallaPrincipal() {
 }
 
 function dibujarHUD() {
-  fill(230, 235, 245);
+  fill(240, 245, 255);
   noStroke();
   textSize(min(width, height) * 0.04);
   textStyle(BOLD);
   text(miAlgebralian.nombre, width / 2, height * 0.05);
 
   textSize(min(width, height) * 0.022);
-  dibujarPill(width * 0.22, height * 0.09, "🪙 " + monedas, color(45, 40, 30), color(255, 200, 60));
+  dibujarPill(width * 0.22, height * 0.09, "🪙 " + monedas, color(38, 44, 62), color(255, 215, 100));
   
   let totalComida = inventarioComida.manzana + inventarioComida.pizza + inventarioComida.pastel;
-  dibujarPill(width * 0.78, height * 0.09, "🍱 " + totalComida, color(45, 30, 35), color(255, 100, 100));
+  dibujarPill(width * 0.78, height * 0.09, "🍱 " + totalComida, color(38, 44, 62), color(255, 130, 130));
 
   let anchoBarra = width * 0.24;
   let yBarras = height * 0.15;
 
-  dibujarBarraEstilizada("Comida", hambre, width * 0.08, yBarras, anchoBarra, color(255, 140, 60));
-  dibujarBarraEstilizada("Sueño", energia, width * 0.38, yBarras, anchoBarra, color(80, 160, 240));
-  dibujarBarraEstilizada("Juego", felicidad, width * 0.68, yBarras, anchoBarra, color(240, 90, 160));
+  dibujarBarraEstilizada("Comida", hambre, width * 0.08, yBarras, anchoBarra, color(255, 150, 110));
+  dibujarBarraEstilizada("Sueño", energia, width * 0.38, yBarras, anchoBarra, color(130, 180, 255));
+  dibujarBarraEstilizada("Juego", felicidad, width * 0.68, yBarras, anchoBarra, color(255, 140, 200));
 }
 
 function dibujarPill(x, y, texto, colorFondo, colorTexto) {
@@ -382,15 +376,15 @@ function dibujarBarraEstilizada(etiqueta, valor, x, y, ancho, col) {
   textAlign(LEFT, CENTER);
   noStroke();
   fill(180, 190, 210);
-  textSize(min(width, height) * 0.02);
+  textSize(min(width, height) * 0.018);
   textStyle(BOLD);
   text(etiqueta, x, y);
 
-  fill(40, 48, 68);
-  rect(x, y + 12, ancho, 14, 8);
+  fill(32, 38, 55);
+  rect(x, y + 12, ancho, 12, 6);
 
   fill(col);
-  rect(x, y + 12, map(valor, 0, 100, 0, ancho), 14, 8);
+  rect(x, y + 12, map(valor, 0, 100, 0, ancho), 12, 6);
   pop();
 }
 
@@ -399,83 +393,78 @@ function dibujarBotones() {
   let btnH = height * 0.08;
   let btnY = height * 0.88;
 
-  dibujarBotonSatisfactorio(width * 0.02, btnY, btnW, btnH, "🍱 Comer", color(255, 160, 60), color(200, 110, 30));
-  dibujarBotonSatisfactorio(width * 0.21, btnY, btnW, btnH, "💤 Dormir", color(80, 160, 240), color(50, 120, 190));
-  dibujarBotonSatisfactorio(width * 0.40, btnY, btnW, btnH, "🎮 Jugar", color(240, 90, 160), color(180, 50, 120));
-  dibujarBotonSatisfactorio(width * 0.59, btnY, btnW, btnH, "🏪 Tienda", color(255, 200, 60), color(200, 150, 20));
-  dibujarBotonSatisfactorio(width * 0.78, btnY, btnW, btnH, "🏢 Guardería", color(160, 100, 240), color(110, 60, 180));
+  dibujarBotonSatisfactorio(width * 0.02, btnY, btnW, btnH, "🍱 Comer", color(255, 160, 100), color(200, 110, 60));
+  dibujarBotonSatisfactorio(width * 0.21, btnY, btnW, btnH, "💤 Dormir", color(120, 170, 240), color(70, 120, 190));
+  dibujarBotonSatisfactorio(width * 0.40, btnY, btnW, btnH, "🎮 Jugar", color(240, 120, 180), color(180, 70, 130));
+  dibujarBotonSatisfactorio(width * 0.59, btnY, btnW, btnH, "🏪 Tienda", color(255, 200, 100), color(200, 150, 50));
+  dibujarBotonSatisfactorio(width * 0.78, btnY, btnW, btnH, "🏢 Guardería", color(170, 130, 240), color(120, 80, 180));
 }
 
+// --- FUNCIÓN DE BOTÓN OPTIMIZADA SIN TRASLACIÓN GLOBAL ---
 function dibujarBotonSatisfactorio(x, y, w, h, etiqueta, col, colSombra) {
   push();
   let hover = colisionCaja(x, y, w, h);
   let presionado = hover && mouseIsPressed;
-  let scaleFactor = presionado ? 0.95 : (hover ? 1.04 : 1.0);
-
-  translate(x + w / 2, y + h / 2);
-  scale(scaleFactor);
+  let desplY = presionado ? 2 : (hover ? -2 : 0);
 
   noStroke();
+  // Sombra del botón
   fill(colSombra);
-  rect(-w / 2, -h / 2 + 4, w, h, 14);
+  rect(x, y + 4, w, h, 16);
 
+  // Botón principal
   fill(hover ? lerpColor(col, color(255), 0.15) : col);
-  rect(-w / 2, -h / 2, w, h, 14);
+  rect(x, y + desplY, w, h, 16);
 
+  // Texto del botón
   fill(255);
-  textSize(min(width, height) * 0.022);
+  textSize(min(width, height) * 0.02);
   textStyle(BOLD);
   textAlign(CENTER, CENTER);
-  text(etiqueta, 0, 0);
+  text(etiqueta, x + w / 2, y + h / 2 + desplY);
   pop();
 }
 
 function dibujarMenuMinijuegos() {
-  background(24, 28, 42);
-  fill(230, 235, 245);
+  fill(240, 245, 255);
   noStroke();
-  textSize(min(width, height) * 0.045);
+  textSize(min(width, height) * 0.04);
   textStyle(BOLD);
-  textAlign(CENTER, CENTER);
-  text("🎮 Selecciona un Minijuego", width / 2, height * 0.07);
+  text("🎮 Minijuegos Relax", width / 2, height * 0.07);
 
   let cardW = width * 0.72;
   let cardH = height * 0.16;
 
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.13, cardW, cardH, "🍪 Atrapa Galletas", "Atrapa galletas aceleradas y evita bombas.", color(45, 40, 55), color(230, 150, 80));
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.30, cardW, cardH, "🥷 Escape Ninja 2D", "Cúbrete tras las paredes móviles.", color(35, 45, 65), color(90, 150, 220));
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.47, cardW, cardH, "🧗 Algebralian Climb", "Sube por plataformas rebotando.", color(30, 55, 45), color(90, 210, 140));
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.64, cardW, cardH, "🌋 Terremoto Deforme", "Haz clic para deformar la línea sísmica y esquivar pinchos.", color(55, 35, 45), color(220, 100, 100));
+  dibujarTarjetaMinijuego(width * 0.14, height * 0.13, cardW, cardH, "🍪 Atrapa Galletas", "Atrapa galletas y suma monedas.", color(38, 44, 62), color(255, 180, 120));
+  dibujarTarjetaMinijuego(width * 0.14, height * 0.30, cardW, cardH, "🥷 Escape Ninja 2D", "Protégete tras los muros móviles.", color(38, 44, 62), color(130, 180, 255));
+  dibujarTarjetaMinijuego(width * 0.14, height * 0.47, cardW, cardH, "🧗 Algebralian Climb", "Sube a tu ritmo rebotando alto.", color(38, 44, 62), color(140, 230, 170));
+  dibujarTarjetaMinijuego(width * 0.14, height * 0.64, cardW, cardH, "🌋 Terremoto Deforme", "Haz clic para moldear la onda sísmica y esquivar pinchos.", color(38, 44, 62), color(255, 130, 130));
 
-  dibujarBotonSatisfactorio(width * 0.35, height * 0.83, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
+  dibujarBotonSatisfactorio(width * 0.35, height * 0.83, width * 0.3, height * 0.08, "Volver", color(240, 100, 100), color(180, 60, 60));
 }
 
 function dibujarTarjetaMinijuego(x, y, w, h, titulo, desc, colFondo, colBorde) {
   push();
   let hover = colisionCaja(x, y, w, h);
-  let scaleFactor = hover ? 1.02 : 1.0;
-
-  translate(x + w / 2, y + h / 2);
-  scale(scaleFactor);
+  let desplY = hover ? -2 : 0;
 
   stroke(colBorde);
-  strokeWeight(2.5);
-  fill(hover ? lerpColor(colFondo, color(255), 0.1) : colFondo);
-  rect(-w / 2, -h / 2, w, h, 20);
+  strokeWeight(2);
+  fill(colFondo);
+  rect(x, y + desplY, w, h, 20);
 
   noStroke();
   textAlign(CENTER, CENTER);
-
-  fill(230, 235, 245);
-  textSize(min(width, height) * 0.03);
+  fill(240, 245, 255);
+  textSize(min(width, height) * 0.028);
   textStyle(BOLD);
-  text(titulo, 0, -h * 0.22);
+  text(titulo, x + w / 2, y + h * 0.3 + desplY);
 
-  fill(160, 170, 190);
-  textSize(min(width, height) * 0.019);
-  textWrap(WORD);
+  fill(170, 180, 200);
+  textSize(min(width, height) * 0.018);
   rectMode(CENTER);
-  text(desc, 0, h * 0.18, w * 0.88, h * 0.5);
+  text(desc, x + w / 2, y + h * 0.7 + desplY, w * 0.88, h * 0.5);
+  rectMode(CORNER);
   pop();
 }
 
@@ -486,59 +475,40 @@ function iniciarMinijuegoGalletas() {
   monedasGanadasMinijuego = 0;
   jugadorX = width / 2;
   jugadorY = height * 0.82;
-  comidaArrastrando = null;
   gameOverGalletas = false;
 }
 
 function ejecutarMinijuegoGalletas(dt) {
   if (gameOverGalletas) {
-    background(25, 15, 20);
-    fill(240, 70, 70);
-    textSize(min(width, height) * 0.06);
-    textStyle(BOLD);
-    text("💥 ¡BOOM! GAME OVER 💥", width / 2, height * 0.3);
-
-    fill(230);
-    textSize(min(width, height) * 0.03);
-    text("¡Atrapaste una bomba!", width / 2, height * 0.4);
-    text("Puntos conseguidos: " + puntajeMinijuego, width / 2, height * 0.5);
-    text("Monedas recolectadas: 🪙 " + monedasGanadasMinijuego, width / 2, height * 0.56);
-
-    dibujarBotonSatisfactorio(width * 0.35, height * 0.72, width * 0.3, height * 0.08, "Aceptar", color(240, 90, 90), color(190, 60, 60));
+    dibujarGameOver("🍪 ¡Fin del Minijuego!", "Monedas conseguidas: 🪙 " + monedasGanadasMinijuego);
     return;
   }
 
-  background(35, 30, 45);
-  jugadorX = constrain(mouseX, 40, width - 40);
+  jugadorX = lerp(jugadorX, constrain(mouseX, 40, width - 40), 0.2);
   jugadorY = height * 0.82;
 
-  if (frameCount % 10 === 0) {
+  if (frameCount % 12 === 0) {
     let azar = random(1);
-    let tipoObjeto = "GALLETA";
-    if (azar < 0.25) tipoObjeto = "BOMBA";
-    else if (azar < 0.55) tipoObjeto = "MONEDA";
-
-    objetos.push({ x: random(20, width - 20), y: -20, vy: random(180, 320), tipo: tipoObjeto });
+    let tipoObjeto = azar < 0.2 ? "BOMBA" : (azar < 0.55 ? "MONEDA" : "GALLETA");
+    objetos.push({ x: random(30, width - 30), y: -20, vy: random(180, 300), tipo: tipoObjeto });
   }
 
   for (let i = objetos.length - 1; i >= 0; i--) {
     let obj = objetos[i];
     obj.y += obj.vy * dt;
     textSize(min(width, height) * 0.05);
-    if (obj.tipo === "GALLETA") text("🍪", obj.x, obj.y);
-    else if (obj.tipo === "MONEDA") text("🪙", obj.x, obj.y);
-    else text("💣", obj.x, obj.y);
+    text(obj.tipo === "GALLETA" ? "🍪" : (obj.tipo === "MONEDA" ? "🪙" : "💣"), obj.x, obj.y);
 
     if (dist(obj.x, obj.y, jugadorX, jugadorY) < min(width, height) * 0.08) {
       if (obj.tipo === "GALLETA") {
         puntajeMinijuego += 10;
         monedas++;
         monedasGanadasMinijuego++;
-        felicidad = min(100, felicidad + 5);
+        felicidad = min(100, felicidad + 3);
       } else if (obj.tipo === "MONEDA") {
         monedas++;
         monedasGanadasMinijuego++;
-      } else if (obj.tipo === "BOMBA") {
+      } else {
         gameOverGalletas = true;
         guardarJuego();
         return;
@@ -546,22 +516,19 @@ function ejecutarMinijuegoGalletas(dt) {
       objetos.splice(i, 1);
       continue;
     }
-    if (obj.y > height) objetos.splice(i, 1);
+    if (obj.y > height + 30) objetos.splice(i, 1);
   }
 
   if (imagenPersonaje) {
-    let tam = min(width, height) * 0.15;
-    push();
+    let tam = min(width, height) * 0.14;
     let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
     image(imgFinal, jugadorX, jugadorY, tam, tam);
-    pop();
   }
 
   dibujarHUDMinijuego();
 }
 
 let margenDeVida = 0;
-
 function iniciarMinijuegoNinja() {
   estadoJuego = "MINIJUEGO_NINJA";
   objetos = [];
@@ -569,7 +536,6 @@ function iniciarMinijuegoNinja() {
   monedasGanadasMinijuego = 0;
   jugadorX = width / 2;
   jugadorY = height / 2;
-  comidaArrastrando = null;
   gameOverNinja = false;
   estadoLuz = "APAGADA";
   temporizadorLuz = millis() + random(4000, 7000);
@@ -582,29 +548,13 @@ function iniciarMinijuegoNinja() {
 
 function ejecutarMinijuegoNinja(dt) {
   if (gameOverNinja) {
-    background(20, 10, 15);
-    fill(240, 70, 70);
-    textSize(min(width, height) * 0.06);
-    textStyle(BOLD);
-    text("🚨 ¡GAME OVER! 🚨", width / 2, height * 0.3);
-
-    fill(230);
-    textSize(min(width, height) * 0.03);
-    text("¡Te detectó la luz ninja!", width / 2, height * 0.4);
-    text("Puntos conseguidos: " + floor(puntajeMinijuego), width / 2, height * 0.5);
-    text("Monedas recolectadas: 🪙 " + monedasGanadasMinijuego, width / 2, height * 0.56);
-
-    dibujarBotonSatisfactorio(width * 0.35, height * 0.72, width * 0.3, height * 0.08, "Aceptar", color(240, 90, 90), color(190, 60, 60));
+    dibujarGameOver("🚨 ¡Te detectaron!", "Puntos alcanzados: " + floor(puntajeMinijuego));
     return;
   }
 
-  if (estadoLuz === "APAGADA") background(18, 22, 32);
-  else if (estadoLuz === "ADVERTENCIA") background(180, 130, 40);
-  else if (estadoLuz === "ENCENDIDA") background(240, 230, 180);
-
   let tamJugador = min(width, height) * 0.13;
-  jugadorX = constrain(mouseX, tamJugador / 2, width - tamJugador / 2);
-  jugadorY = constrain(mouseY, height * 0.15, height - tamJugador / 2);
+  jugadorX = lerp(jugadorX, constrain(mouseX, tamJugador / 2, width - tamJugador / 2), 0.2);
+  jugadorY = lerp(jugadorY, constrain(mouseY, height * 0.15, height - tamJugador / 2), 0.2);
 
   let tiempoActual = millis();
 
@@ -616,7 +566,7 @@ function ejecutarMinijuegoNinja(dt) {
     temporizadorLuz = tiempoActual + 3000;
   } else if (estadoLuz === "ENCENDIDA" && tiempoActual > temporizadorLuz) {
     estadoLuz = "APAGADA";
-    temporizadorLuz = tiempoActual + random(5000, 9000);
+    temporizadorLuz = tiempoActual + random(5000, 8000);
   }
 
   if (frameCount % 45 === 0) {
@@ -629,17 +579,12 @@ function ejecutarMinijuegoNinja(dt) {
       p.targetY = random(height * 0.25, height * 0.8);
       p.tiempoCambio = frameCount + floor(random(180, 300));
     }
-    p.x = lerp(p.x, p.targetX, 2.5 * dt);
-    p.y = lerp(p.y, p.targetY, 2.5 * dt);
+    p.x = lerp(p.x, p.targetX, 2.0 * dt);
+    p.y = lerp(p.y, p.targetY, 2.0 * dt);
 
-    noStroke();
-    fill(0, 50);
-    rect(p.x - p.w / 2 + 4, p.y - p.h / 2 + 4, p.w, p.h, 14);
-    stroke(60, 35, 15);
-    strokeWeight(2.5);
-    fill(100, 60, 30);
-    rect(p.x - p.w / 2, p.y - p.h / 2, p.w, p.h, 14);
-    noStroke();
+    fill(60, 45, 75);
+    rect(p.x - p.w / 2, p.y - p.h / 2, p.w, p.h, 16);
+    fill(255);
     textSize(min(width, height) * 0.04);
     text("🪵", p.x, p.y);
   }
@@ -655,31 +600,25 @@ function ejecutarMinijuegoNinja(dt) {
 
   if (estadoLuz === "ENCENDIDA" && !aSalvo) {
     margenDeVida += dt;
-    if (margenDeVida > 0.07) {
+    if (margenDeVida > 0.08) {
       gameOverNinja = true;
       guardarJuego();
       return;
     }
-  } else {
-    margenDeVida = 0;
   }
 
   if (imagenPersonaje) {
     push();
     let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
-    if (aSalvo) {
-      tint(255, 180); 
-      image(imgFinal, jugadorX, jugadorY, tamJugador, tamJugador);
-    } else {
-      image(imgFinal, jugadorX, jugadorY, tamJugador, tamJugador);
-    }
+    if (aSalvo) tint(255, 170);
+    image(imgFinal, jugadorX, jugadorY, tamJugador, tamJugador);
     pop();
   }
 
   for (let i = objetos.length - 1; i >= 0; i--) {
     let obj = objetos[i];
     obj.vida -= (60 * dt);
-    textSize(min(width, height) * 0.05);
+    textSize(min(width, height) * 0.04);
     text("🪙", obj.x, obj.y);
 
     if (dist(obj.x, obj.y, jugadorX, jugadorY) < tamJugador * 0.6) {
@@ -692,10 +631,10 @@ function ejecutarMinijuegoNinja(dt) {
   }
 
   if (estadoLuz === "ADVERTENCIA") {
-    fill(255, 230, 80);
-    textSize(min(width, height) * 0.035);
+    fill(255, 220, 100);
+    textSize(min(width, height) * 0.03);
     textStyle(BOLD);
-    text("⚠ ¡CÚBRETE EN LAS PAREDES! ⚠️", width / 2, height * 0.18);
+    text("⚠ ¡Protégete tras las paredes! ⚠️", width / 2, height * 0.18);
   } else if (estadoLuz === "APAGADA") {
     puntajeMinijuego += (6 * dt);
   }
@@ -728,30 +667,15 @@ function iniciarMinijuegoClimb() {
 
 function ejecutarMinijuegoClimb(dt) {
   if (gameOverClimb) {
-    background(25, 30, 20);
-    fill(240, 70, 70);
-    textSize(min(width, height) * 0.06);
-    textStyle(BOLD);
-    text("🧗 ¡CAÍSTE! GAME OVER 🧗", width / 2, height * 0.3);
-
-    fill(230);
-    textSize(min(width, height) * 0.03);
-    text("Máxima Plataforma Alcanzada: #" + maxPlataformaAlcanzada, width / 2, height * 0.42);
-    text("Monedas recolectadas: 🪙 " + monedasGanadasMinijuego, width / 2, height * 0.5);
-
-    dibujarBotonSatisfactorio(width * 0.35, height * 0.72, width * 0.3, height * 0.08, "Aceptar", color(240, 90, 90), color(190, 60, 60));
+    dibujarGameOver("🧗 ¡Buena subida!", "Máxima plataforma: #" + maxPlataformaAlcanzada);
     return;
   }
 
-  background(25, 35, 55);
-
-  jugadorX = constrain(mouseX, 30, width - 30);
+  jugadorX = lerp(jugadorX, constrain(mouseX, 30, width - 30), 0.25);
   jugadorVY += GRAVEDAD_CLIMB * dt;
   jugadorY += jugadorVY * dt;
 
-  let targetCamY = min(climbCamY, jugadorY);
-  climbCamY = lerp(climbCamY, targetCamY, 0.1);
-
+  climbCamY = lerp(climbCamY, min(climbCamY, jugadorY), 0.1);
   let tamJ = min(width, height) * 0.12;
 
   for (let i = plataformas.length - 1; i >= 0; i--) {
@@ -760,12 +684,12 @@ function ejecutarMinijuegoClimb(dt) {
 
     if (screenY > height + 150) {
       plataformas.splice(i, 1);
-      let ultimaPlat = plataformas[plataformas.length - 1];
-      let nuevoIndex = ultimaPlat.index + 1;
+      let ult = plataformas[plataformas.length - 1];
+      let nIdx = ult.index + 1;
       plataformas.push({
-        index: nuevoIndex,
+        index: nIdx,
         x: random(width * 0.18, width * 0.82),
-        y: -nuevoIndex * 125,
+        y: -nIdx * 125,
         w: random(width * 0.2, width * 0.28),
         h: 18
       });
@@ -773,31 +697,20 @@ function ejecutarMinijuegoClimb(dt) {
     }
 
     if (screenY > -50 && screenY < height + 50) {
-      noStroke();
-      fill(80, 180, 100);
+      fill(130, 210, 160);
       rect(plat.x - plat.w / 2, screenY, plat.w, plat.h, 8);
-      fill(255, 220, 100);
-      textSize(12);
-      text("#" + plat.index, plat.x, screenY + 9);
 
       if (jugadorVY > 0) {
         let pieY = jugadorY + tamJ / 2;
         let pieViejo = (jugadorY - jugadorVY * dt) + tamJ / 2;
         if (jugadorX >= plat.x - plat.w / 2 - 10 && jugadorX <= plat.x + plat.w / 2 + 10) {
           if (pieViejo <= plat.y + 8 && pieY >= plat.y - 8) {
-            let fuerzaSalto = SALTO_CLIMB;
-            if (mouseIsPressed || keyIsPressed) {
-              fuerzaSalto *= 1.4;
-            }
-            jugadorVY = fuerzaSalto;
+            jugadorVY = (mouseIsPressed || keyIsPressed) ? SALTO_CLIMB * 1.35 : SALTO_CLIMB;
             jugadorY = plat.y - tamJ / 2;
 
             if (plat.index > maxPlataformaAlcanzada) {
               for (let p = maxPlataformaAlcanzada + 1; p <= plat.index; p++) {
-                if (p % 2 === 0) {
-                  monedas++;
-                  monedasGanadasMinijuego++;
-                }
+                if (p % 2 === 0) { monedas++; monedasGanadasMinijuego++; }
               }
               maxPlataformaAlcanzada = plat.index;
               puntajeMinijuego = maxPlataformaAlcanzada * 10;
@@ -817,16 +730,13 @@ function ejecutarMinijuegoClimb(dt) {
 
   let miScreenY = jugadorY - climbCamY + height * 0.65;
   if (imagenPersonaje) {
-    push();
     let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
     image(imgFinal, jugadorX, miScreenY, tamJ, tamJ);
-    pop();
   }
 
   dibujarHUDMinijuego();
 }
 
-// --- LÓGICA MINIJUEGO TERREMOTO DEFORME (MODIFICADO) ---
 function iniciarMinijuegoTerremoto() {
   estadoJuego = "MINIJUEGO_TERREMOTO";
   puntajeMinijuego = 0;
@@ -834,9 +744,9 @@ function iniciarMinijuegoTerremoto() {
   gameOverTerremoto = false;
   terremotoAlgebralianX = width * 0.1;
   terremotoDireccion = 1;
-  terremotoVelocidad = 50; // Inicia lento y acelera gradualmente
+  terremotoVelocidad = 50;
   tiempoInicioTerremoto = millis();
-  proximoSpawnPincho = millis() + 5000; // Primeros 5 segundos sin pinchos
+  proximoSpawnPincho = millis() + 5000;
 
   let numPuntos = 10;
   terremotoPuntos = [];
@@ -846,15 +756,15 @@ function iniciarMinijuegoTerremoto() {
   for (let i = 0; i < numPuntos; i++) {
     terremotoPuntos.push({
       x: i * pasoX,
-      y: baseHeight + sin(i * 0.8) * 40,
-      targetY: baseHeight + sin(i * 0.8) * 40
+      y: baseHeight + sin(i * 0.8) * 35,
+      targetY: baseHeight + sin(i * 0.8) * 35
     });
   }
 
   terremotoPinchos = [];
   terremotoSenales = [];
-
   terremotoMonedas = [];
+
   for (let i = 0; i < 3; i++) {
     terremotoMonedas.push({
       idx: floor(random(1, numPuntos - 1)),
@@ -879,46 +789,27 @@ function obtenerPosicionTerremoto() {
 
 function ejecutarMinijuegoTerremoto(dt) {
   if (gameOverTerremoto) {
-    background(30, 15, 20);
-    fill(240, 70, 70);
-    textSize(min(width, height) * 0.06);
-    textStyle(BOLD);
-    text("🌋 ¡GAME OVER! 🌋", width / 2, height * 0.3);
-
-    fill(230);
-    textSize(min(width, height) * 0.03);
-    text("¡Chocaste con un pincho flotante!", width / 2, height * 0.42);
-    text("Puntos conseguidos: " + floor(puntajeMinijuego), width / 2, height * 0.5);
-    text("Monedas recolectadas: 🪙 " + monedasGanadasMinijuego, width / 2, height * 0.56);
-
-    dibujarBotonSatisfactorio(width * 0.35, height * 0.72, width * 0.3, height * 0.08, "Aceptar", color(240, 90, 90), color(190, 60, 60));
+    dibujarGameOver("🌋 ¡Gran intento!", "Monedas recolectadas: 🪙 " + monedasGanadasMinijuego);
     return;
   }
 
   let ahora = millis();
   let tiempoTranscurrido = (ahora - tiempoInicioTerremoto) / 1000;
-
-  // Aceleración progresiva del Algebralian
   terremotoVelocidad = 50 + tiempoTranscurrido * 12;
 
-  // Sistema de spawner para advertencias y pinchos
   if (tiempoTranscurrido >= 5 && ahora >= proximoSpawnPincho) {
     let xSpawn = random(width * 0.08, width * 0.92);
-    let dirY = random() < 0.5 ? 1 : -1; // 1: baja, -1: sube
+    let dirY = random() < 0.5 ? 1 : -1;
     
-    // Añadir señal de advertencia por 0.5s (500 ms)
     terremotoSenales.push({
       x: xSpawn,
       dirY: dirY,
       tiempoFin: ahora + 500
     });
 
-    // Frecuencia de generación de pinchos progresivamente más rápida
     let intervalo = max(600, 2200 - tiempoTranscurrido * 50);
     proximoSpawnPincho = ahora + intervalo;
   }
-
-  background(40, 25, 35);
 
   for (let p of terremotoPuntos) {
     p.y = lerp(p.y, p.targetY, 6 * dt);
@@ -937,35 +828,26 @@ function ejecutarMinijuegoTerremoto(dt) {
 
   obtenerPosicionTerremoto();
 
-  // Dibujar terremoto (Línea sísmica)
-  stroke(220, 100, 100);
-  strokeWeight(8);
+  stroke(255, 140, 140);
+  strokeWeight(6);
   noFill();
   beginShape();
-  for (let p of terremotoPuntos) {
-    vertex(p.x, p.y);
-  }
+  for (let p of terremotoPuntos) vertex(p.x, p.y);
   endShape();
 
-  stroke(150, 50, 50);
-  strokeWeight(2);
-  for (let p of terremotoPuntos) {
-    line(p.x, p.y, p.x, height);
-  }
+  stroke(255, 140, 140, 40);
+  strokeWeight(1);
+  for (let p of terremotoPuntos) line(p.x, p.y, p.x, height);
 
-  // Procesar señales de advertencia (duran 0.5 segundos)
   for (let i = terremotoSenales.length - 1; i >= 0; i--) {
     let s = terremotoSenales[i];
-    
-    // Dibujar señal
     noStroke();
-    fill(255, 200, 0);
-    textSize(min(width, height) * 0.04);
-    let yAdvertencia = s.dirY === 1 ? height * 0.08 : height * 0.92;
-    text("⚠️", s.x, yAdvertencia);
+    fill(255, 215, 0);
+    textSize(min(width, height) * 0.035);
+    let yAdv = s.dirY === 1 ? height * 0.08 : height * 0.92;
+    text("⚠️", s.x, yAdv);
 
     if (ahora >= s.tiempoFin) {
-      // Transformar la señal en un pincho flotante al finalizar los 0.5s
       let yInicial = s.dirY === 1 ? -30 : height + 30;
       let vySpeed = random(180, 320) * s.dirY;
       terremotoPinchos.push({
@@ -978,34 +860,27 @@ function ejecutarMinijuegoTerremoto(dt) {
     }
   }
 
-  // Actualizar y dibujar Pinchos (Círculos Negros Flotantes)
   for (let i = terremotoPinchos.length - 1; i >= 0; i--) {
     let pincho = terremotoPinchos[i];
     pincho.y += pincho.vy * dt;
 
-    // Dibujar Círculo Negro Flotante
     noStroke();
-    fill(10);
-    ellipse(pincho.x, pincho.y, pincho.radio * 2, pincho.radio * 2);
+    fill(45, 50, 65);
+    ellipse(pincho.x, pincho.y, pincho.radio * 2);
+    fill(255, 100, 100);
+    ellipse(pincho.x, pincho.y, pincho.radio * 0.8);
 
-    // Brillo interior para acabado estético
-    fill(60);
-    ellipse(pincho.x - pincho.radio * 0.3, pincho.y - pincho.radio * 0.3, pincho.radio * 0.6, pincho.radio * 0.6);
-
-    // Detección de colisión con Algebralian
-    if (dist(terremotoAlgebralianX, terremotoAlgebralianY, pincho.x, pincho.y) < pincho.radio + 20) {
+    if (dist(terremotoAlgebralianX, terremotoAlgebralianY, pincho.x, pincho.y) < pincho.radio + 18) {
       gameOverTerremoto = true;
       guardarJuego();
       return;
     }
 
-    // Borrar cuando sale de la pantalla por arriba o por abajo
     if ((pincho.vy > 0 && pincho.y > height + 50) || (pincho.vy < 0 && pincho.y < -50)) {
       terremotoPinchos.splice(i, 1);
     }
   }
 
-  // Monedas
   for (let m of terremotoMonedas) {
     m.timer -= 60 * dt;
     if (m.timer <= 0) {
@@ -1019,8 +894,8 @@ function ejecutarMinijuegoTerremoto(dt) {
       let my = terremotoPuntos[m.idx].y - 35;
 
       noStroke();
-      fill(255, 200, 60);
-      textSize(min(width, height) * 0.04);
+      fill(255, 215, 0);
+      textSize(min(width, height) * 0.035);
       text("🪙", mx, my);
 
       if (dist(terremotoAlgebralianX, terremotoAlgebralianY, mx, my) < 30) {
@@ -1032,9 +907,8 @@ function ejecutarMinijuegoTerremoto(dt) {
     }
   }
 
-  // Dibujar Algebralian rebotando
   let tam = min(width, height) * 0.12;
-  let rebo = abs(sin(frameCount * 0.15)) * 12;
+  let rebo = abs(sin(frameCount * 0.15)) * 10;
 
   push();
   let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
@@ -1045,81 +919,78 @@ function ejecutarMinijuegoTerremoto(dt) {
   dibujarHUDMinijuego();
 }
 
-function keyPressed() {
-  if (mostrandoTecladoNombre) {
-    if (keyCode === BACKSPACE) {
-      textoNuevoNombre = textoNuevoNombre.substring(0, textoNuevoNombre.length - 1);
-      return false;
-    } else if (keyCode === ESCAPE) {
-      mostrandoTecladoNombre = false;
-      return false;
-    }
-  }
+function dibujarGameOver(titulo, sub) {
+  fill(38, 44, 62);
+  rect(width * 0.2, height * 0.25, width * 0.6, height * 0.5, 24);
+
+  fill(255, 140, 140);
+  textSize(min(width, height) * 0.045);
+  textStyle(BOLD);
+  text(titulo, width / 2, height * 0.38);
+
+  fill(230);
+  textSize(min(width, height) * 0.025);
+  text(sub, width / 2, height * 0.48);
+
+  dibujarBotonSatisfactorio(width * 0.35, height * 0.6, width * 0.3, height * 0.08, "Aceptar", color(240, 100, 100), color(180, 60, 60));
 }
 
 function dibujarHUDMinijuego() {
   fill(240);
   noStroke();
-  textSize(min(width, height) * 0.024);
+  textSize(min(width, height) * 0.022);
   textStyle(BOLD);
   let txtP = estadoJuego === "MINIJUEGO_CLIMB" ? "Plataforma: #" + maxPlataformaAlcanzada : "Puntos: " + floor(puntajeMinijuego);
   text(txtP, width * 0.2, height * 0.05);
   text("🪙 + " + monedasGanadasMinijuego, width * 0.5, height * 0.05);
 
-  let btnW = min(width, height) * 0.18;
-  let btnH = min(width, height) * 0.06;
+  let btnW = min(width, height) * 0.16;
+  let btnH = min(width, height) * 0.05;
   let btnX = width * 0.82 - btnW / 2;
   let btnY = height * 0.03;
 
-  dibujarBotonSatisfactorio(btnX, btnY, btnW, btnH, "Salir", color(240, 80, 80), color(180, 50, 50));
+  dibujarBotonSatisfactorio(btnX, btnY, btnW, btnH, "Salir", color(240, 90, 90), color(180, 50, 50));
 }
 
 function dibujarTienda() {
-  background(26, 30, 44);
-  fill(230, 235, 245);
+  fill(240, 245, 255);
   noStroke();
-  textSize(min(width, height) * 0.045);
+  textSize(min(width, height) * 0.04);
   textStyle(BOLD);
-  text("🏪 Tienda", width / 2, height * 0.08);
+  text("🏪 Tienda Relax", width / 2, height * 0.08);
 
-  fill(255, 200, 60);
-  textSize(min(width, height) * 0.026);
-  text("Tus Monedas: 🪙 " + monedas, width / 2, height * 0.13);
+  fill(255, 215, 100);
+  textSize(min(width, height) * 0.024);
+  text("Monedas: 🪙 " + monedas, width / 2, height * 0.13);
 
-  let pW = width * 0.35;
-  let pH = height * 0.06;
-  
-  dibujarBotonSatisfactorio(width * 0.12, height * 0.17, pW, pH, "🍎 Comida", pestanaTienda === "COMIDA" ? color(255, 140, 60) : color(60, 70, 90), color(40, 45, 60));
-  dibujarBotonSatisfactorio(width * 0.53, height * 0.17, pW, pH, "👑 Decoración", pestanaTienda === "DECORACION" ? color(180, 100, 240) : color(60, 70, 90), color(40, 45, 60));
+  let pW = width * 0.35, pH = height * 0.06;
+  dibujarBotonSatisfactorio(width * 0.12, height * 0.17, pW, pH, "🍎 Comida", pestanaTienda === "COMIDA" ? color(255, 160, 100) : color(50, 60, 80), color(35, 40, 55));
+  dibujarBotonSatisfactorio(width * 0.53, height * 0.17, pW, pH, "👑 Decoración", pestanaTienda === "DECORACION" ? color(170, 130, 240) : color(50, 60, 80), color(35, 40, 55));
 
   if (pestanaTienda === "COMIDA") {
     dibujarItemTienda(height * 0.25, "🍎", "Manzana (+25 Hambre)", "10");
     dibujarItemTienda(height * 0.40, "🍕", "Pizza (+50 Hambre)", "20");
     dibujarItemTienda(height * 0.55, "🎂", "Pastel (+80 Hambre, +10 Felicidad)", "35");
   } else if (pestanaTienda === "DECORACION") {
-    let poseoGorro = decoracionesCompradas.includes("GORRO");
-    let txtGorro = poseoGorro ? (decoracionEquipada === "GORRO" ? "Equipado" : "Equipar") : "🪙 30";
-    dibujarItemTienda(height * 0.25, "🧢", "Gorro Casual", txtGorro);
+    let pGorro = decoracionesCompradas.includes("GORRO");
+    dibujarItemTienda(height * 0.25, "🧢", "Gorro Casual", pGorro ? (decoracionEquipada === "GORRO" ? "Equipado" : "Equipar") : "🪙 30");
 
-    let poseoSombrero = decoracionesCompradas.includes("SOMBRERO");
-    let txtSombrero = poseoSombrero ? (decoracionEquipada === "SOMBRERO" ? "Equipado" : "Equipar") : "🪙 50";
-    dibujarItemTienda(height * 0.39, "🎩", "Sombrero Elegante", txtSombrero);
+    let pSombrero = decoracionesCompradas.includes("SOMBRERO");
+    dibujarItemTienda(height * 0.39, "🎩", "Sombrero Elegante", pSombrero ? (decoracionEquipada === "SOMBRERO" ? "Equipado" : "Equipar") : "🪙 50");
 
-    let poseoCorona = decoracionesCompradas.includes("CORONA");
-    let txtCorona = poseoCorona ? (decoracionEquipada === "CORONA" ? "Equipada" : "Equipar") : "🪙 100";
-    dibujarItemTienda(height * 0.53, "👑", "Corona Real", txtCorona);
+    let pCorona = decoracionesCompradas.includes("CORONA");
+    dibujarItemTienda(height * 0.53, "👑", "Corona Real", pCorona ? (decoracionEquipada === "CORONA" ? "Equipada" : "Equipar") : "🪙 100");
 
-    let poseoTinte = decoracionesCompradas.includes("TINTE");
-    let txtTinte = poseoTinte ? "🎨 Personalizar" : "🪙 40";
-    dibujarItemTienda(height * 0.67, "🎨", "Tinte de Color Especial", txtTinte);
+    let pTinte = decoracionesCompradas.includes("TINTE");
+    dibujarItemTienda(height * 0.67, "🎨", "Tinte de Color Especial", pTinte ? "🎨 Personalizar" : "🪙 40");
   }
 
-  dibujarBotonSatisfactorio(width * 0.35, height * 0.83, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
+  dibujarBotonSatisfactorio(width * 0.35, height * 0.83, width * 0.3, height * 0.08, "Volver", color(240, 100, 100), color(180, 60, 60));
 }
 
 function dibujarItemTienda(y, emoji, nombre, precioTexto) {
   push();
-  stroke(55, 65, 90);
+  stroke(50, 60, 85);
   strokeWeight(2);
   fill(38, 44, 62);
   rect(width * 0.1, y, width * 0.8, height * 0.12, 16);
@@ -1129,17 +1000,15 @@ function dibujarItemTienda(y, emoji, nombre, precioTexto) {
   text(emoji, width * 0.18, y + height * 0.06);
 
   textAlign(LEFT, CENTER);
-  fill(230, 235, 245);
-  textSize(min(width, height) * 0.024);
+  fill(240, 245, 255);
+  textSize(min(width, height) * 0.022);
   textStyle(BOLD);
   text(nombre, width * 0.28, y + height * 0.06);
 
-  let btnW = width * 0.24;
-  let btnH = height * 0.055;
-  let btnX = width * 0.63;
-  let btnY = y + height * 0.032;
+  let btnW = width * 0.24, btnH = height * 0.055;
+  let btnX = width * 0.63, btnY = y + height * 0.032;
 
-  dibujarBotonSatisfactorio(btnX, btnY, btnW, btnH, precioTexto, color(100, 210, 120), color(60, 160, 80));
+  dibujarBotonSatisfactorio(btnX, btnY, btnW, btnH, precioTexto, color(110, 210, 140), color(70, 160, 95));
   pop();
 }
 
@@ -1149,64 +1018,30 @@ function abrirMenuTintes() {
 }
 
 function dibujarMenuSeleccionTintes() {
-  background(26, 30, 44);
-
-  fill(230, 235, 245);
+  fill(240, 245, 255);
   noStroke();
-  textSize(min(width, height) * 0.045);
+  textSize(min(width, height) * 0.04);
   textStyle(BOLD);
-  text("🎨 Tinte para tu Algebralian", width / 2, height * 0.08);
+  text("🎨 Tinte Personalizado", width / 2, height * 0.08);
 
-  textSize(min(width, height) * 0.022);
-  fill(170, 180, 205);
-  text("Selecciona un color para previsualizar la apariencia", width / 2, height * 0.13);
-
-  let prevX = width / 2;
-  let prevY = height * 0.32;
-  let tam = min(width, height) * 0.28;
+  let prevX = width / 2, prevY = height * 0.32;
+  let tam = min(width, height) * 0.26;
 
   push();
   fill(38, 44, 62);
   stroke(60, 70, 95);
-  strokeWeight(3);
+  strokeWeight(2);
   rect(prevX - tam * 0.7, prevY - tam * 0.55, tam * 1.4, tam * 1.1, 20);
-
-  noStroke();
-  fill(0, 70);
-  ellipse(prevX, prevY + tam * 0.4, tam * 0.6, tam * 0.12);
 
   if (imagenPersonaje) {
     let imgPrev = obtenerImagenTintada(imagenPersonaje, tintePrevisualizado);
     image(imgPrev, prevX, prevY, tam, tam);
-
-    if (decoracionEquipada === "GORRO") {
-      textSize(tam * 0.38);
-      text("🧢", prevX, prevY - tam * 0.38);
-    } else if (decoracionEquipada === "SOMBRERO") {
-      textSize(tam * 0.4);
-      text("🎩", prevX, prevY - tam * 0.42);
-    } else if (decoracionEquipada === "CORONA") {
-      textSize(tam * 0.4);
-      text("👑", prevX, prevY - tam * 0.42);
-    }
   }
   pop();
 
-  let nombreColor = "SIN TINTE (Original)";
-  if (tintePrevisualizado) {
-    let encontrado = PALETA_TINTES.find(t => t.color[0] === tintePrevisualizado[0] && t.color[1] === tintePrevisualizado[1] && t.color[2] === tintePrevisualizado[2]);
-    if (encontrado) nombreColor = encontrado.nombre;
-  }
-  fill(255, 220, 100);
-  textSize(min(width, height) * 0.026);
-  textStyle(BOLD);
-  text("Color: " + nombreColor, width / 2, height * 0.51);
-
   let cols = 4;
-  let btnW = width * 0.18;
-  let btnH = height * 0.065;
-  let gapX = width * 0.02;
-  let gapY = height * 0.018;
+  let btnW = width * 0.18, btnH = height * 0.065;
+  let gapX = width * 0.02, gapY = height * 0.018;
 
   let totalW = cols * btnW + (cols - 1) * gapX;
   let startX = width / 2 - totalW / 2;
@@ -1214,51 +1049,28 @@ function dibujarMenuSeleccionTintes() {
 
   for (let i = 0; i < PALETA_TINTES.length; i++) {
     let item = PALETA_TINTES[i];
-    let colIndex = i % cols;
-    let rowIndex = floor(i / cols);
-
+    let colIndex = i % cols, rowIndex = floor(i / cols);
     let bx = startX + colIndex * (btnW + gapX);
     let by = startY + rowIndex * (btnH + gapY);
 
     let c = item.color;
-    let colBtn = color(c[0], c[1], c[2]);
-    let colSombra = color(max(0, c[0] - 50), max(0, c[1] - 50), max(0, c[2] - 50));
-
-    let seleccionado = tintePrevisualizado && tintePrevisualizado[0] === c[0] && tintePrevisualizado[1] === c[1] && tintePrevisualizado[2] === c[2];
-    if (seleccionado) {
-      stroke(255, 230, 80);
-      strokeWeight(3.5);
-    } else {
-      noStroke();
-    }
-
-    dibujarBotonSatisfactorio(bx, by, btnW, btnH, item.nombre, colBtn, colSombra);
+    dibujarBotonSatisfactorio(bx, by, btnW, btnH, item.nombre, color(c[0], c[1], c[2]), color(max(0, c[0] - 40), max(0, c[1] - 40), max(0, c[2] - 40)));
   }
 
-  let bW = width * 0.25;
-  let bH = height * 0.075;
-  let bY = height * 0.82;
-
-  dibujarBotonSatisfactorio(width * 0.08, bY, bW, bH, "🚫 Quitar Tinte", color(200, 80, 80), color(140, 40, 40));
-  dibujarBotonSatisfactorio(width * 0.375, bY, bW, bH, "💾 Guardar", color(100, 210, 120), color(60, 160, 80));
-  dibujarBotonSatisfactorio(width * 0.67, bY, bW, bH, "↩ Cancelar", color(120, 130, 150), color(80, 90, 110));
+  let bW = width * 0.25, bH = height * 0.075, bY = height * 0.82;
+  dibujarBotonSatisfactorio(width * 0.08, bY, bW, bH, "🚫 Sin Tinte", color(220, 100, 100), color(160, 50, 50));
+  dibujarBotonSatisfactorio(width * 0.375, bY, bW, bH, "💾 Guardar", color(110, 210, 140), color(70, 160, 95));
+  dibujarBotonSatisfactorio(width * 0.67, bY, bW, bH, "↩ Volver", color(130, 140, 160), color(90, 100, 120));
 }
 
 function manejarClickMenuTintes() {
-  let cols = 4;
-  let btnW = width * 0.18;
-  let btnH = height * 0.065;
-  let gapX = width * 0.02;
-  let gapY = height * 0.018;
-
+  let cols = 4, btnW = width * 0.18, btnH = height * 0.065;
+  let gapX = width * 0.02, gapY = height * 0.018;
   let totalW = cols * btnW + (cols - 1) * gapX;
-  let startX = width / 2 - totalW / 2;
-  let startY = height * 0.56;
+  let startX = width / 2 - totalW / 2, startY = height * 0.56;
 
   for (let i = 0; i < PALETA_TINTES.length; i++) {
-    let colIndex = i % cols;
-    let rowIndex = floor(i / cols);
-
+    let colIndex = i % cols, rowIndex = floor(i / cols);
     let bx = startX + colIndex * (btnW + gapX);
     let by = startY + rowIndex * (btnH + gapY);
 
@@ -1268,109 +1080,71 @@ function manejarClickMenuTintes() {
     }
   }
 
-  let bW = width * 0.25;
-  let bH = height * 0.075;
-  let bY = height * 0.82;
-
-  if (colisionCaja(width * 0.08, bY, bW, bH)) {
-    tintePrevisualizado = null;
-  }
-
-  if (colisionCaja(width * 0.375, bY, bW, bH)) {
-    colorTinte = tintePrevisualizado;
-    guardarJuego();
-    estadoJuego = "TIENDA";
-  }
-
-  if (colisionCaja(width * 0.67, bY, bW, bH)) {
-    estadoJuego = "TIENDA";
-  }
+  let bW = width * 0.25, bH = height * 0.075, bY = height * 0.82;
+  if (colisionCaja(width * 0.08, bY, bW, bH)) tintePrevisualizado = null;
+  if (colisionCaja(width * 0.375, bY, bW, bH)) { colorTinte = tintePrevisualizado; guardarJuego(); estadoJuego = "TIENDA"; }
+  if (colisionCaja(width * 0.67, bY, bW, bH)) estadoJuego = "TIENDA";
 }
 
 function dibujarGuarderiaOnline() {
-  background(28, 32, 48);
-
   push();
   textAlign(LEFT, CENTER);
-  fill(255, 220, 100);
-  textSize(min(width, height) * 0.024);
+  fill(255, 215, 100);
+  textSize(min(width, height) * 0.022);
   textStyle(BOLD);
   text("👤 " + nombreUsuario, width * 0.03, height * 0.05);
   pop();
 
-  dibujarBotonSatisfactorio(width * 0.03, height * 0.08, width * 0.22, height * 0.05, "✏️ Cambiar Nombre", color(80, 180, 200), color(50, 130, 150));
+  dibujarBotonSatisfactorio(width * 0.03, height * 0.08, width * 0.22, height * 0.05, "✏️ Cambiar Nombre", color(100, 180, 220), color(60, 130, 160));
 
-  fill(230, 235, 245);
+  fill(240, 245, 255);
   noStroke();
-  textSize(min(width, height) * 0.045);
+  textSize(min(width, height) * 0.04);
   textStyle(BOLD);
   text("🌐 Guardería Online", width / 2, height * 0.08);
 
   let otrosJugadores = listaJugadores.filter(p => p.idJugador !== miEstadoCompartido.idJugador);
 
   if (otrosJugadores.length === 0) {
-    fill(180, 190, 210);
-    textSize(min(width, height) * 0.028);
-    text("Buscando Algebralians en la guardería...", width / 2, height * 0.45);
-    text("🟢 Estás solo por ahora en la red...", width / 2, height * 0.52);
-    dibujarBotonSatisfactorio(width * 0.35, height * 0.82, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
+    fill(170, 180, 200);
+    textSize(min(width, height) * 0.025);
+    text("Buscando Algebralians conectados...", width / 2, height * 0.48);
+    dibujarBotonSatisfactorio(width * 0.35, height * 0.82, width * 0.3, height * 0.08, "Volver", color(240, 100, 100), color(180, 60, 60));
     return;
   }
 
   indiceGuarderia = constrain(indiceGuarderia, 0, otrosJugadores.length - 1);
   let jugadorActual = otrosJugadores[indiceGuarderia];
-  let imgJugadorGuarderia = obtenerImagenPersonaje(jugadorActual.url);
 
-  stroke(60, 70, 95);
-  strokeWeight(3);
-  fill(36, 42, 60);
+  fill(38, 44, 62);
   rect(width * 0.15, height * 0.16, width * 0.7, height * 0.6, 20);
 
-  noStroke();
-  fill(255, 200, 60);
-  textSize(min(width, height) * 0.035);
+  fill(255, 215, 100);
+  textSize(min(width, height) * 0.032);
   textStyle(BOLD);
-  let nombreRivalFinal = jugadorActual.nombreUsuario || ("Jugador #" + jugadorActual.idJugador);
-  text(nombreRivalFinal, width / 2, height * 0.22);
+  text(jugadorActual.nombreUsuario || ("Jugador #" + jugadorActual.idJugador), width / 2, height * 0.22);
 
-  textSize(min(width, height) * 0.022);
-  fill(160, 170, 190);
-  text("Personaje: " + (jugadorActual.nombre || "Algebralian"), width / 2, height * 0.26);
-  text("Hambre actual: " + floor(jugadorActual.hambre || 0) + "%", width / 2, height * 0.30);
-
-  let tam = min(width, height) * 0.25;
-  if (imgJugadorGuarderia) {
+  let tam = min(width, height) * 0.24;
+  let imgRival = obtenerImagenPersonaje(jugadorActual.url);
+  if (imgRival) {
     push();
-    translate(width / 2, height * 0.48);
-    let imgRival = obtenerImagenPersonaje(jugadorActual.url);
+    translate(width / 2, height * 0.46);
     let imgRivalTintada = obtenerImagenTintada(imgRival, jugadorActual.tinte);
     image(imgRivalTintada, 0, 0, tam, tam);
-
-    if (jugadorActual.decoracion === "GORRO") {
-      textSize(tam * 0.38);
-      text("🧢", 0, -tam * 0.38);
-    } else if (jugadorActual.decoracion === "SOMBRERO") {
-      textSize(tam * 0.4);
-      text("🎩", 0, -tam * 0.42);
-    } else if (jugadorActual.decoracion === "CORONA") {
-      textSize(tam * 0.4);
-      text("👑", 0, -tam * 0.42);
-    }
     pop();
   }
 
-  dibujarBotonSatisfactorio(width * 0.25, height * 0.64, width * 0.5, height * 0.07, "🍎 ALIMENTAR (+15 Monedas)", color(100, 210, 120), color(60, 160, 80));
+  dibujarBotonSatisfactorio(width * 0.25, height * 0.64, width * 0.5, height * 0.07, "🍎 ALIMENTAR (+15 Monedas)", color(110, 210, 140), color(70, 160, 95));
 
   if (mensajeGuarderia !== "") {
     fill(255, 220, 100);
-    textSize(min(width, height) * 0.022);
+    textSize(min(width, height) * 0.02);
     text(mensajeGuarderia, width / 2, height * 0.73);
   }
 
-  dibujarBotonSatisfactorio(width * 0.05, height * 0.42, width * 0.08, height * 0.1, "◀", color(80, 160, 240), color(50, 120, 190));
-  dibujarBotonSatisfactorio(width * 0.87, height * 0.42, width * 0.08, height * 0.1, "▶", color(80, 160, 240), color(50, 120, 190));
-
-  dibujarBotonSatisfactorio(width * 0.35, height * 0.82, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
+  dibujarBotonSatisfactorio(width * 0.05, height * 0.42, width * 0.08, height * 0.1, "◀", color(120, 170, 240), color(70, 120, 190));
+  dibujarBotonSatisfactorio(width * 0.87, height * 0.42, width * 0.08, height * 0.1, "▶", color(120, 170, 240), color(70, 120, 190));
+  dibujarBotonSatisfactorio(width * 0.35, height * 0.82, width * 0.3, height * 0.08, "Volver", color(240, 100, 100), color(180, 60, 60));
 }
 
 function obtenerFilasTeclado() {
@@ -1384,7 +1158,6 @@ function obtenerFilasTeclado() {
     let f1 = ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"];
     let f2 = ["A", "S", "D", "F", "G", "H", "J", "K", "L"];
     let f3 = ["⇧", "Z", "X", "C", "V", "B", "N", "M", "123", "⌫"];
-
     if (!mayusculasTeclado) {
       f1 = f1.map(c => c.toLowerCase());
       f2 = f2.map(c => c.toLowerCase());
@@ -1396,28 +1169,22 @@ function obtenerFilasTeclado() {
 
 function dibujarTecladoCustomizado() {
   push();
-  fill(0, 190);
+  fill(0, 180);
   rect(0, 0, width, height);
 
-  stroke(80, 100, 140);
-  strokeWeight(2);
   fill(30, 36, 52);
   rect(width * 0.08, height * 0.15, width * 0.84, height * 0.72, 24);
 
-  noStroke();
   fill(255);
-  textSize(min(width, height) * 0.035);
+  textSize(min(width, height) * 0.03);
   textStyle(BOLD);
-  text("✏ Ingresa tu Nombre de Usuario", width / 2, height * 0.21);
+  text("✏ Cambiar Nombre", width / 2, height * 0.21);
 
-  fill(18, 22, 32);
-  stroke(100, 180, 240);
-  strokeWeight(2);
+  fill(20, 25, 38);
   rect(width * 0.15, height * 0.25, width * 0.7, height * 0.08, 12);
 
-  noStroke();
-  fill(255, 220, 100);
-  textSize(min(width, height) * 0.032);
+  fill(255, 215, 100);
+  textSize(min(width, height) * 0.03);
   text(textoNuevoNombre + "│", width / 2, height * 0.29);
 
   let filas = obtenerFilasTeclado();
@@ -1434,30 +1201,18 @@ function dibujarTecladoCustomizado() {
       let ky = startY + r * (keyH + 8);
       let charKey = fila[c];
 
-      let colBoton = color(55, 65, 90);
-      let colSombra = color(35, 42, 60);
-
-      if (charKey === "⇧" && mayusculasTeclado) {
-        colBoton = color(80, 160, 240);
-        colSombra = color(50, 120, 190);
-      } else if (charKey === "123" || charKey === "ABC") {
-        colBoton = color(160, 100, 240);
-        colSombra = color(110, 60, 180);
-      }
-
-      dibujarBotonSatisfactorio(kx + 2, ky, keyW - 4, keyH, charKey, colBoton, colSombra);
+      dibujarBotonSatisfactorio(kx + 2, ky, keyW - 4, keyH, charKey, color(50, 60, 85), color(35, 42, 60));
     }
   }
 
-  dibujarBotonSatisfactorio(width * 0.18, height * 0.74, width * 0.3, height * 0.08, "GUARDAR", color(100, 210, 120), color(60, 160, 80));
-  dibujarBotonSatisfactorio(width * 0.52, height * 0.74, width * 0.3, height * 0.08, "CANCELAR", color(240, 90, 90), color(190, 60, 60));
+  dibujarBotonSatisfactorio(width * 0.18, height * 0.74, width * 0.3, height * 0.08, "GUARDAR", color(110, 210, 140), color(70, 160, 95));
+  dibujarBotonSatisfactorio(width * 0.52, height * 0.74, width * 0.3, height * 0.08, "CANCELAR", color(240, 100, 100), color(180, 60, 60));
   pop();
 }
 
 function manejarClickTeclado() {
   let filas = obtenerFilasTeclado();
-  let startY = height * 0.38;
-  let keyH = height * 0.08;
+  let startY = height * 0.38, keyH = height * 0.08;
 
   for (let r = 0; r < filas.length; r++) {
     let fila = filas[r];
@@ -1465,63 +1220,45 @@ function manejarClickTeclado() {
     let startX = width / 2 - (keyW * fila.length) / 2;
 
     for (let c = 0; c < fila.length; c++) {
-      let kx = startX + c * keyW;
-      let ky = startY + r * (keyH + 8);
+      let kx = startX + c * keyW, ky = startY + r * (keyH + 8);
 
       if (colisionCaja(kx + 2, ky, keyW - 4, keyH)) {
         let charKey = fila[c];
-        
-        if (charKey === "⌫") {
-          textoNuevoNombre = textoNuevoNombre.substring(0, textoNuevoNombre.length - 1);
-        } else if (charKey === "⇧") {
-          mayusculasTeclado = !mayusculasTeclado;
-        } else if (charKey === "123") {
-          modoNumerosTeclado = true;
-        } else if (charKey === "ABC") {
-          modoNumerosTeclado = false;
-        } else {
-          if (textoNuevoNombre.length < 14) textoNuevoNombre += charKey;
-        }
+        if (charKey === "⌫") textoNuevoNombre = textoNuevoNombre.substring(0, textoNuevoNombre.length - 1);
+        else if (charKey === "⇧") mayusculasTeclado = !mayusculasTeclado;
+        else if (charKey === "123") modoNumerosTeclado = true;
+        else if (charKey === "ABC") modoNumerosTeclado = false;
+        else if (textoNuevoNombre.length < 14) textoNuevoNombre += charKey;
         return;
       }
     }
   }
 
   if (colisionCaja(width * 0.18, height * 0.74, width * 0.3, height * 0.08)) {
-    if (textoNuevoNombre.trim() !== "") {
-      nombreUsuario = textoNuevoNombre.trim();
-      guardarJuego();
-    }
+    if (textoNuevoNombre.trim() !== "") { nombreUsuario = textoNuevoNombre.trim(); guardarJuego(); }
     mostrandoTecladoNombre = false;
   }
+  if (colisionCaja(width * 0.52, height * 0.74, width * 0.3, height * 0.08)) mostrandoTecladoNombre = false;
+}
 
-  if (colisionCaja(width * 0.52, height * 0.74, width * 0.3, height * 0.08)) {
-    mostrandoTecladoNombre = false;
+function keyPressed() {
+  if (mostrandoTecladoNombre) {
+    if (keyCode === BACKSPACE) textoNuevoNombre = textoNuevoNombre.substring(0, textoNuevoNombre.length - 1);
+    else if (keyCode === ESCAPE) mostrandoTecladoNombre = false;
   }
 }
 
 function mousePressed() {
-  if (mostrandoTecladoNombre) {
-    manejarClickTeclado();
-    return;
-  }
-
-  if (estadoJuego === "MENU_TINTES") {
-    manejarClickMenuTintes();
-    return;
-  }
+  if (mostrandoTecladoNombre) { manejarClickTeclado(); return; }
+  if (estadoJuego === "MENU_TINTES") { manejarClickMenuTintes(); return; }
 
   if (estadoJuego === "MINIJUEGO_TERREMOTO" && !gameOverTerremoto) {
     for (let p of terremotoPuntos) {
-      if (dist(mouseX, mouseY, p.x, p.y) < 80) {
-        p.targetY = mouseY;
-      }
+      if (dist(mouseX, mouseY, p.x, p.y) < 90) p.targetY = mouseY;
     }
   }
 
-  let btnW = width * 0.17;
-  let btnH = height * 0.08;
-  let btnY = height * 0.88;
+  let btnW = width * 0.17, btnH = height * 0.08, btnY = height * 0.88;
 
   if (estadoJuego === "PRINCIPAL") {
     if (colisionCaja(width * 0.02, btnY, btnW, btnH)) {
@@ -1529,40 +1266,28 @@ function mousePressed() {
       else if (inventarioComida.pizza > 0) comidaArrastrando = "pizza";
       else if (inventarioComida.pastel > 0) comidaArrastrando = "pastel";
     }
-    if (colisionCaja(width * 0.21, btnY, btnW, btnH)) {
-      energia = min(100, energia + 30);
-      guardarJuego();
-    }
+    if (colisionCaja(width * 0.21, btnY, btnW, btnH)) { energia = min(100, energia + 30); guardarJuego(); }
     if (colisionCaja(width * 0.40, btnY, btnW, btnH)) estadoJuego = "MENU_MINIJUEGOS";
     if (colisionCaja(width * 0.59, btnY, btnW, btnH)) estadoJuego = "TIENDA";
     if (colisionCaja(width * 0.78, btnY, btnW, btnH)) estadoJuego = "GUARDERIA";
 
   } else if (estadoJuego === "MENU_MINIJUEGOS") {
     let cardW = width * 0.72, cardH = height * 0.16;
-
     if (colisionCaja(width * 0.14, height * 0.13, cardW, cardH)) iniciarMinijuegoGalletas();
     if (colisionCaja(width * 0.14, height * 0.30, cardW, cardH)) iniciarMinijuegoNinja();
     if (colisionCaja(width * 0.14, height * 0.47, cardW, cardH)) iniciarMinijuegoClimb();
     if (colisionCaja(width * 0.14, height * 0.64, cardW, cardH)) iniciarMinijuegoTerremoto();
     if (colisionCaja(width * 0.35, height * 0.83, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
 
-  } else if (estadoJuego === "MINIJUEGO_GALLETAS" || estadoJuego === "MINIJUEGO_NINJA" || estadoJuego === "MINIJUEGO_CLIMB" || estadoJuego === "MINIJUEGO_TERREMOTO") {
+  } else if (estadoJuego.startsWith("MINIJUEGO_")) {
     if (gameOverGalletas || gameOverNinja || gameOverClimb || gameOverTerremoto) {
-      if (colisionCaja(width * 0.35, height * 0.72, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
+      if (colisionCaja(width * 0.35, height * 0.6, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
     } else {
-      let btnW = min(width, height) * 0.18;
-      let btnH = min(width, height) * 0.06;
-      let btnX = width * 0.82 - btnW / 2;
-      let btnY = height * 0.03;
-
-      if (colisionCaja(btnX, btnY, btnW, btnH)) {
-        guardarJuego();
-        estadoJuego = "PRINCIPAL";
-      }
+      let bW = min(width, height) * 0.16, bH = min(width, height) * 0.05;
+      if (colisionCaja(width * 0.82 - bW / 2, height * 0.03, bW, bH)) { guardarJuego(); estadoJuego = "PRINCIPAL"; }
     }
   } else if (estadoJuego === "TIENDA") {
     let pW = width * 0.35, pH = height * 0.06;
-
     if (colisionCaja(width * 0.12, height * 0.17, pW, pH)) pestanaTienda = "COMIDA";
     if (colisionCaja(width * 0.53, height * 0.17, pW, pH)) pestanaTienda = "DECORACION";
 
@@ -1572,53 +1297,28 @@ function mousePressed() {
       if (colisionCaja(btnX, height * 0.25 + height * 0.032, btnWItem, btnHItem) && monedas >= 10) { monedas -= 10; inventarioComida.manzana++; guardarJuego(); }
       if (colisionCaja(btnX, height * 0.40 + height * 0.032, btnWItem, btnHItem) && monedas >= 20) { monedas -= 20; inventarioComida.pizza++; guardarJuego(); }
       if (colisionCaja(btnX, height * 0.55 + height * 0.032, btnWItem, btnHItem) && monedas >= 35) { monedas -= 35; inventarioComida.pastel++; guardarJuego(); }
-    } else if (pestanaTienda === "DECORACION") {
+    } else {
       if (colisionCaja(btnX, height * 0.25 + height * 0.032, btnWItem, btnHItem)) {
-        let poseoGorro = decoracionesCompradas.includes("GORRO");
-        if (!poseoGorro && monedas >= 30) {
-          monedas -= 30;
-          decoracionesCompradas.push("GORRO");
-          decoracionEquipada = "GORRO";
-        } else if (poseoGorro) {
-          decoracionEquipada = (decoracionEquipada === "GORRO") ? null : "GORRO";
-        }
+        if (!decoracionesCompradas.includes("GORRO") && monedas >= 30) { monedas -= 30; decoracionesCompradas.push("GORRO"); decoracionEquipada = "GORRO"; }
+        else if (decoracionesCompradas.includes("GORRO")) decoracionEquipada = (decoracionEquipada === "GORRO") ? null : "GORRO";
         guardarJuego();
       }
       if (colisionCaja(btnX, height * 0.39 + height * 0.032, btnWItem, btnHItem)) {
-        let poseoSombrero = decoracionesCompradas.includes("SOMBRERO");
-        if (!poseoSombrero && monedas >= 50) {
-          monedas -= 50;
-          decoracionesCompradas.push("SOMBRERO");
-          decoracionEquipada = "SOMBRERO";
-        } else if (poseoSombrero) {
-          decoracionEquipada = (decoracionEquipada === "SOMBRERO") ? null : "SOMBRERO";
-        }
+        if (!decoracionesCompradas.includes("SOMBRERO") && monedas >= 50) { monedas -= 50; decoracionesCompradas.push("SOMBRERO"); decoracionEquipada = "SOMBRERO"; }
+        else if (decoracionesCompradas.includes("SOMBRERO")) decoracionEquipada = (decoracionEquipada === "SOMBRERO") ? null : "SOMBRERO";
         guardarJuego();
       }
       if (colisionCaja(btnX, height * 0.53 + height * 0.032, btnWItem, btnHItem)) {
-        let poseoCorona = decoracionesCompradas.includes("CORONA");
-        if (!poseoCorona && monedas >= 100) {
-          monedas -= 100;
-          decoracionesCompradas.push("CORONA");
-          decoracionEquipada = "CORONA";
-        } else if (poseoCorona) {
-          decoracionEquipada = (decoracionEquipada === "CORONA") ? null : "CORONA";
-        }
+        if (!decoracionesCompradas.includes("CORONA") && monedas >= 100) { monedas -= 100; decoracionesCompradas.push("CORONA"); decoracionEquipada = "CORONA"; }
+        else if (decoracionesCompradas.includes("CORONA")) decoracionEquipada = (decoracionEquipada === "CORONA") ? null : "CORONA";
         guardarJuego();
       }
       if (colisionCaja(btnX, height * 0.67 + height * 0.032, btnWItem, btnHItem)) {
-        let poseoTinte = decoracionesCompradas.includes("TINTE");
-        if (!poseoTinte && monedas >= 40) {
-          monedas -= 40;
-          decoracionesCompradas.push("TINTE");
-          abrirMenuTintes();
-        } else if (poseoTinte) {
-          abrirMenuTintes();
-        }
+        if (!decoracionesCompradas.includes("TINTE") && monedas >= 40) { monedas -= 40; decoracionesCompradas.push("TINTE"); abrirMenuTintes(); }
+        else if (decoracionesCompradas.includes("TINTE")) abrirMenuTintes();
         guardarJuego();
       }
     }
-
     if (colisionCaja(width * 0.35, height * 0.83, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
 
   } else if (estadoJuego === "GUARDERIA") {
@@ -1640,19 +1340,19 @@ function mousePressed() {
         mensajeGuarderia = "";
       }
       if (colisionCaja(width * 0.25, height * 0.64, width * 0.5, height * 0.07)) {
-        let objetivo = otrosJugadores[indiceGuarderia];
-        if (objetivo) {
-          objetivo.hambre = min(100, (objetivo.hambre || 50) + 20);
+        let obj = otrosJugadores[indiceGuarderia];
+        if (obj) {
+          obj.hambre = min(100, (obj.hambre || 50) + 20);
           monedas += 15;
-          mensajeGuarderia = "✨ ¡Alimentaste a " + (objetivo.nombreUsuario || "Algebralian") + "! Ganaste 15 monedas 🪙";
+          mensajeGuarderia = "✨ ¡Alimentaste a " + (obj.nombreUsuario || "Algebralian") + "! +15 Monedas 🪙";
           guardarJuego();
         }
       }
     }
-
     if (colisionCaja(width * 0.35, height * 0.82, width * 0.3, height * 0.08)) {
       mensajeGuarderia = "";
       estadoJuego = "PRINCIPAL";
     }
   }
 }
+p
