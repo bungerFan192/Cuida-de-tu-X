@@ -32,7 +32,7 @@ const PALETA_TINTES = [
   { nombre: "AMARILLO", color: [235, 217, 52] },
   { nombre: "VERDE", color: [52, 235, 89] },
   { nombre: "CIAN", color: [52, 232, 235] },
-  { nombre: "AZUL", color: [52, 119, 235] },
+  { nombre: "AZUL", color: [34, 35, 245] },
   { nombre: "MAGENTA", color: [128, 52, 235] },
   { nombre: "ROSA", color: [211, 52, 235] }
 ];
