@@ -1900,7 +1900,7 @@ function mousePressed() {
       let btnY = height * 0.03;
 
       // Evaluamos con un margen expandido de 10px para que el clic sea 100% consistente
-      if (colisionCaja() {
+      if (colisionCaja()) {
         guardarJuego(btnX, btnY, btnW, btnH);
         estadoJuego = "PRINCIPAL";
       }
