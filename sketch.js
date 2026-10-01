@@ -132,7 +132,7 @@ function obtenerImagenPersonaje(url) {
   return cacheImagenes[url];
 }
 
-function obtenerImagenTintada(img, tinte, umbralNegro = 80, umbralBlanco = 195) {
+function obtenerImagenTintada(img, tinte, umbralNegro = 30, umbralBlanco = 248) {
   if (!img || !tinte) return img;
 
   let claveCache = img.canvas ? img.canvas.toDataURL() + "_" + tinte.join(",") : tinte.join(",");
@@ -532,6 +532,8 @@ function ejecutarMinijuegoGalletas(dt) {
     if (dist(obj.x, obj.y, jugadorX, jugadorY) < min(width, height) * 0.08) {
       if (obj.tipo === "GALLETA") {
         puntajeMinijuego += 10;
+        monedas++;
+        monedasGanadasMinijuego++;
         felicidad = min(100, felicidad + 5);
       } else if (obj.tipo === "MONEDA") {
         monedas++;
@@ -652,12 +654,14 @@ function ejecutarMinijuegoNinja(dt) {
   }
 
   if (estadoLuz === "ENCENDIDA" && !aSalvo) {
-    margenDeVida += deltaTime;
+    margenDeVida += dt;
     if (margenDeVida > 0.07) {
       gameOverNinja = true;
       guardarJuego();
       return;
     }
+  } else {
+    margenDeVida = 0;
   }
 
   if (imagenPersonaje) {
@@ -781,7 +785,11 @@ function ejecutarMinijuegoClimb(dt) {
         let pieViejo = (jugadorY - jugadorVY * dt) + tamJ / 2;
         if (jugadorX >= plat.x - plat.w / 2 - 10 && jugadorX <= plat.x + plat.w / 2 + 10) {
           if (pieViejo <= plat.y + 8 && pieY >= plat.y - 8) {
-            jugadorVY = SALTO_CLIMB;
+            let fuerzaSalto = SALTO_CLIMB;
+            if (mouseIsPressed || keyIsPressed) {
+              fuerzaSalto *= 1.4;
+            }
+            jugadorVY = fuerzaSalto;
             jugadorY = plat.y - tamJ / 2;
 
             if (plat.index > maxPlataformaAlcanzada) {
