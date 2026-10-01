@@ -1271,7 +1271,7 @@ function keyPressed() {
   }
 }
 
-function mousePressed() {
+function mouseClicked() {
   if (mostrandoTecladoNombre) { manejarClickTeclado(); return; }
   if (estadoJuego === "MENU_TINTES") { manejarClickMenuTintes(); return; }
 
@@ -1378,4 +1378,3 @@ function mousePressed() {
     }
   }
 }
-p
