@@ -155,9 +155,12 @@ function obtenerImagenTintada(img, tinte, umbralNegro = 30, umbralBlanco = 225) 
 
     if (a === 0) continue;
 
-    let brillo = 0.299 * r + 0.587 * g + 0.114 * b;
+        // Un píxel se considera blanco si TODOS sus canales están muy cerca del blanco puro (255)
+    let esBlancoPuro = (r >= umbralBlanco && g >= umbralBlanco && b >= umbralBlanco);
+    let esNegroPuro = (r <= umbralNegro && g <= umbralNegro && b <= umbralNegro);
 
-    if (brillo > umbralNegro && brillo < umbralBlanco) {
+    // Modificar el color solo si no es negro ni blanco puro
+    if (!esNegroPuro && !esBlancoPuro) {
       imgProcesada.pixels[i] = r * tr;
       imgProcesada.pixels[i + 1] = g * tg;
       imgProcesada.pixels[i + 2] = b * tb;
