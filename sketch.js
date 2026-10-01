@@ -91,8 +91,8 @@ let gameOverClimb = false;
 
 // --- CONFIGURACIÓN DE ALGEBRALIANS ---
 const ALGEBRALIANS = [
-  { nombre: "X", url: "https://static.wikia.nocookie.net/battlefordreamisland/images/f/f2/X_being_happy.png/revision/latest/scale-to-width-down/164" }, 
-  { nombre: "Four", url: "https://static.wikia.nocookie.net/character-stats-and-profiles/images/6/6c/PastTPOT20Four.png/revision/latest/scale-to-width-down/164" }
+  { nombre: "X", url: "164.webp" },
+  { nombre: "Four", url: "164 (1).webp" }
 ];
 
 let miAlgebralian = null;
