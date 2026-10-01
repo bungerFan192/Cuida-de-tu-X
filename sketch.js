@@ -47,22 +47,9 @@ let textoNuevoNombre = "";
 let mayusculasTeclado = true;
 let modoNumerosTeclado = false;
 
-// --- GUARDERÍA Y DUELOS MULTIJUGADOR ---
+// --- GUARDERÍA ONLINE ---
 let indiceGuarderia = 0;
-
-// Variables de Control del Duelo 1v1
-let idRivalDuelo = null;
-let tipoDueloSeleccionado = "GALLETAS"; 
-let temporizadorDuelo = 1800;
-let puntajeRival = 0;
-let rivalX = 200;
-let rivalY = 200;
-let finDelDuelo = false;
-let mensajeResultadoDuelo = "";
-
-// Multiplicador de aceleración para Atrapa Galletas
-let aceleracionGalletas = 1.0;
-let esHostDuelo = false;
+let mensajeGuarderia = "";
 
 // --- VARIABLES DE ALIMENTACIÓN INTERACTIVA ---
 let comidaArrastrando = null;
@@ -88,6 +75,16 @@ let monedasGanadasMinijuego = 0;
 let gameOverGalletas = false;
 let gameOverNinja = false;
 let gameOverClimb = false;
+
+// --- VARIABLES MINIJUEGO TERREMOTO DEFORME ---
+let terremotoPuntos = [];
+let terremotoPinchos = [];
+let terremotoMonedas = [];
+let terremotoAlgebralianX = 0;
+let terremotoAlgebralianY = 0;
+let terremotoDireccion = 1; // 1 -> Derecha, -1 -> Izquierda
+let terremotoVelocidad = 180;
+let gameOverTerremoto = false;
 
 // --- CONFIGURACIÓN DE ALGEBRALIANS ---
 const ALGEBRALIANS = [
@@ -155,11 +152,9 @@ function obtenerImagenTintada(img, tinte, umbralNegro = 80, umbralBlanco = 195) 
 
     if (a === 0) continue;
 
-        // Un píxel se considera blanco si TODOS sus canales están muy cerca del blanco puro (255)
     let esBlancoPuro = (r >= umbralBlanco && g >= umbralBlanco && b >= umbralBlanco);
     let esNegroPuro = (r <= umbralNegro && g <= umbralNegro && b <= umbralNegro);
 
-    // Modificar el color solo si no es negro ni blanco puro
     if (!esNegroPuro && !esBlancoPuro) {
       imgProcesada.pixels[i] = tr * 255;
       imgProcesada.pixels[i + 1] = tg * 255;
@@ -210,7 +205,7 @@ function preload() {
   guardarJuego();
   imagenPersonaje = loadImage(miAlgebralian.url);
   
-  partyConnect("wss://demoserver.p5party.org", "algebralian_pou_duelos_v8");
+  partyConnect("wss://demoserver.p5party.org", "algebralian_pou_guarderia_v1");
   
   miEstadoCompartido = partyLoadMyShared({
     idJugador: floor(random(1000, 9999)),
@@ -220,15 +215,7 @@ function preload() {
     decoracion: null,
     tinte: null,
     estado: "Feliz",
-    retoRecibido: null,
-    estadoDuelo: "LIBRE",
-    posXDuelo: 200,
-    posYDuelo: 200,
-    puntajeDuelo: 0,
-    objetosRed: [],     
-    paredesRed: [],     
-    plataformasRed: [], 
-    luzRed: "APAGADA"   
+    hambre: 100
   });
   listaJugadores = partyLoadGuestShareds();
 }
@@ -262,6 +249,7 @@ function draw() {
     miEstadoCompartido.url = miAlgebralian.url;
     miEstadoCompartido.decoracion = decoracionEquipada;
     miEstadoCompartido.tinte = colorTinte;
+    miEstadoCompartido.hambre = hambre;
     miEstadoCompartido.estado = hambre < 30 ? "Hambriento" : (energia < 30 ? "Con Sueño" : "Muy Feliz");
   }
 
@@ -272,508 +260,21 @@ function draw() {
   
   if (frameCount % 60 === 0) guardarJuego();
 
-  if (estadoJuego === "ESPERANDO_RESPUESTA_DUELO") {
-    let rivalData = listaJugadores.find(p => p.idJugador === idRivalDuelo);
-    if (!rivalData) {
-      background(30, 20, 45);
-      fill(255, 100, 100);
-      textSize(min(width, height) * 0.035);
-      text("El rival se ha desconectado.", width / 2, height * 0.4);
-      dibujarBotonSatisfactorio(width * 0.35, height * 0.6, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
-      return;
-    }
-    if (rivalData.estadoDuelo === "EN_DUELO") {
-      iniciarDuelo(idRivalDuelo, tipoDueloSeleccionado);
-    } else {
-      background(30, 20, 45);
-      fill(255, 220, 80);
-      textSize(min(width, height) * 0.04);
-      textStyle(BOLD);
-      text("⏳ Esperando respuesta del rival...", width / 2, height * 0.4);
-      textSize(min(width, height) * 0.025);
-      fill(200);
-      text("Minijuego elegido: " + tipoDueloSeleccionado, width / 2, height * 0.48);
-      dibujarBotonSatisfactorio(width * 0.35, height * 0.65, width * 0.3, height * 0.08, "Cancelar", color(240, 90, 90), color(190, 60, 60));
-      return;
-    }
-  }
-
   switch (estadoJuego) {
     case "PRINCIPAL": dibujarPantallaPrincipal(); break;
     case "MENU_MINIJUEGOS": dibujarMenuMinijuegos(); break;
     case "MINIJUEGO_GALLETAS": ejecutarMinijuegoGalletas(dt); break;
     case "MINIJUEGO_NINJA": ejecutarMinijuegoNinja(dt); break;
     case "MINIJUEGO_CLIMB": ejecutarMinijuegoClimb(dt); break;
+    case "MINIJUEGO_TERREMOTO": ejecutarMinijuegoTerremoto(dt); break;
     case "TIENDA": dibujarTienda(); break;
     case "MENU_TINTES": dibujarMenuSeleccionTintes(); break;
     case "GUARDERIA": dibujarGuarderiaOnline(); break;
-    case "MENU_SELECCION_RETOS": dibujarMenuSeleccionRetos(); break;
-    case "SALA_DUELO": ejecutarSalaDuelo1v1(dt); break;
   }
-
-  dibujarVentanaRetoEntrante();
 
   if (mostrandoTecladoNombre) {
     dibujarTecladoCustomizado();
   }
-}
-
-function dibujarVentanaRetoEntrante() {
-  if (miEstadoCompartido && miEstadoCompartido.retoRecibido && estadoJuego !== "SALA_DUELO" && estadoJuego !== "ESPERANDO_RESPUESTA_DUELO") {
-    push();
-    fill(0, 180);
-    rect(0, 0, width, height);
-
-    stroke(255, 200, 60);
-    strokeWeight(3);
-    fill(35, 40, 60);
-    rect(width * 0.15, height * 0.3, width * 0.7, height * 0.4, 20);
-
-    noStroke();
-    fill(255);
-    textSize(min(width, height) * 0.04);
-    textStyle(BOLD);
-    text("⚔ ¡DESAFÍO DE DUELO! ⚔️", width / 2, height * 0.38);
-
-    textSize(min(width, height) * 0.026);
-    fill(220, 230, 245);
-    let infoReto = miEstadoCompartido.retoRecibido;
-    text(infoReto.deNombre + " te ha retado a:\n" + (infoReto.tipoMinijuego || "GALLETAS"), width / 2, height * 0.47);
-
-    dibujarBotonSatisfactorio(width * 0.22, height * 0.58, width * 0.26, height * 0.08, "ACEPTAR", color(100, 210, 120), color(60, 160, 80));
-    dibujarBotonSatisfactorio(width * 0.52, height * 0.58, width * 0.26, height * 0.08, "RECHAZAR", color(240, 90, 90), color(190, 60, 60));
-    pop();
-  }
-}
-
-function dibujarMenuSeleccionRetos() {
-  background(24, 28, 42);
-
-  fill(230, 235, 245);
-  noStroke();
-  textSize(min(width, height) * 0.04);
-  textStyle(BOLD);
-  text("⚔ Elige el Reto de Duelo", width / 2, height * 0.09);
-
-  let cardW = width * 0.72;
-  let cardH = height * 0.19;
-
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.16, cardW, cardH, "🍪 Duelo Pong Galletas", "Pásate la galleta estilo Pong con tu rival.", color(45, 40, 55), color(230, 150, 80));
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.37, cardW, cardH, "🥷 Escape Ninja 2D", "Duelo 1v1: Cúbrete en las paredes sincronizadas.", color(35, 45, 65), color(90, 150, 220));
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.58, cardW, cardH, "🧗 Algebralian Climb", "Duelo 1v1: Sube 25 plataformas lo más rápido posible.", color(30, 55, 45), color(90, 210, 140));
-
-  dibujarBotonSatisfactorio(width * 0.35, height * 0.82, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
-}
-
-function enviarDesafioDuelo(idRival, tipoMinijuego) {
-  idRivalDuelo = idRival;
-  tipoDueloSeleccionado = tipoMinijuego;
-  estadoJuego = "ESPERANDO_RESPUESTA_DUELO";
-  miEstadoCompartido.estadoDuelo = "ESPERANDO";
-
-  let objetivo = listaJugadores.find(p => p.idJugador === idRivalDuelo);
-  if (objetivo) {
-    objetivo.retoRecibido = {
-      deId: miEstadoCompartido.idJugador,
-      deNombre: nombreUsuario,
-      tipoMinijuego: tipoDueloSeleccionado
-    };
-  }
-}
-
-function iniciarDuelo(idRival, tipoMinijuego) {
-  idRivalDuelo = idRival;
-  tipoDueloSeleccionado = tipoMinijuego;
-  estadoJuego = "SALA_DUELO";
-  miEstadoCompartido.estadoDuelo = "EN_DUELO";
-  miEstadoCompartido.puntajeDuelo = 0;
-  miEstadoCompartido.objetosRed = [];
-  miEstadoCompartido.paredesRed = [];
-  miEstadoCompartido.plataformasRed = [];
-  miEstadoCompartido.luzRed = "APAGADA";
-  aceleracionGalletas = 1.0;
-
-  esHostDuelo = miEstadoCompartido.idJugador < idRivalDuelo;
-
-  if (esHostDuelo) {
-    if (tipoDueloSeleccionado === "GALLETAS") {
-      miEstadoCompartido.objetosRed = [{
-        id: random(100000),
-        x: width / 2,
-        y: height * 0.2,
-        vx: random(-150, 150),
-        vy: 250,
-        ultimoGolpe: null
-      }];
-    } else if (tipoDueloSeleccionado === "NINJA") {
-      miEstadoCompartido.paredesRed = [
-        { x: width * 0.3, y: height * 0.4, targetX: width * 0.3, targetY: height * 0.4, w: width * 0.18, h: height * 0.18, tiempoCambio: 0 },
-        { x: width * 0.7, y: height * 0.7, targetX: width * 0.7, targetY: height * 0.7, w: width * 0.18, h: height * 0.18, tiempoCambio: 0 }
-      ];
-      miEstadoCompartido.luzRed = "APAGADA";
-      temporizadorLuz = millis() + random(4000, 7000);
-    } else if (tipoDueloSeleccionado === "CLIMB") {
-      let listaPlats = [{ index: 0, x: width / 2, y: 0, w: width * 0.35, h: 18 }];
-      for (let i = 1; i <= 25; i++) {
-        listaPlats.push({
-          index: i,
-          x: random(width * 0.2, width * 0.8),
-          y: -i * 125,
-          w: width * 0.22,
-          h: 18
-        });
-      }
-      miEstadoCompartido.plataformasRed = listaPlats;
-    }
-  }
-
-  objetos = [];
-  puntajeMinijuego = 0;
-  maxPlataformaAlcanzada = 0;
-  jugadorVY = SALTO_CLIMB;
-  climbCamY = 0;
-  temporizadorDuelo = 1800; 
-  finDelDuelo = false;
-  mensajeResultadoDuelo = "";
-  jugadorX = width / 2;
-  jugadorY = tipoDueloSeleccionado === "CLIMB" ? -20 : height * 0.82;
-}
-
-function ejecutarSalaDuelo1v1(dt) {
-  let rivalData = listaJugadores.find(p => p.idJugador === idRivalDuelo);
-
-  if (!rivalData) {
-    background(30, 20, 45);
-    fill(255, 100, 100);
-    textSize(min(width, height) * 0.04);
-    text("El rival se ha desconectado...", width / 2, height * 0.4);
-    dibujarBotonSatisfactorio(width * 0.35, height * 0.6, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
-    return;
-  }
-
-  let imgRival = obtenerImagenPersonaje(rivalData.url);
-  let hostData = esHostDuelo ? miEstadoCompartido : rivalData;
-  let luzActual = hostData.luzRed || "APAGADA";
-
-  if (tipoDueloSeleccionado === "NINJA") {
-    if (luzActual === "APAGADA") background(18, 22, 32);
-    else if (luzActual === "ADVERTENCIA") background(180, 130, 40);
-    else if (luzActual === "ENCENDIDA") background(240, 230, 180);
-  } else if (tipoDueloSeleccionado === "CLIMB") {
-    background(25, 35, 55);
-  } else {
-    background(30, 20, 45);
-  }
-
-  if (tipoDueloSeleccionado === "GALLETAS") {
-    // Jugador Local: Abajo | Jugador Rival: Arriba
-    jugadorX = constrain(mouseX, 40, width - 40);
-    jugadorY = height * 0.82;
-    rivalX = rivalData.posXDuelo || width / 2;
-    rivalY = height * 0.15;
-  } else if (tipoDueloSeleccionado === "NINJA") {
-    let tamJ = min(width, height) * 0.13;
-    jugadorX = constrain(mouseX, tamJ / 2, width - tamJ / 2);
-    jugadorY = constrain(mouseY, height * 0.15, height - tamJ / 2);
-    rivalX = rivalData.posXDuelo || width / 2;
-    rivalY = rivalData.posYDuelo || 0;
-  } else if (tipoDueloSeleccionado === "CLIMB") {
-    jugadorX = constrain(mouseX, 30, width - 30);
-    jugadorVY += GRAVEDAD_CLIMB * dt;
-    jugadorY += jugadorVY * dt;
-
-    let targetCamY = min(climbCamY, jugadorY);
-    climbCamY = lerp(climbCamY, targetCamY, 0.1);
-
-    rivalX = rivalData.posXDuelo || width / 2;
-    rivalY = rivalData.posYDuelo || 0;
-  }
-
-  puntajeRival = rivalData.puntajeDuelo || 0;
-
-  miEstadoCompartido.posXDuelo = jugadorX;
-  miEstadoCompartido.posYDuelo = jugadorY;
-  miEstadoCompartido.puntajeDuelo = tipoDueloSeleccionado === "CLIMB" ? maxPlataformaAlcanzada : puntajeMinijuego;
-
-  if (finDelDuelo) {
-    fill(255, 220, 80);
-    textSize(min(width, height) * 0.05);
-    textStyle(BOLD);
-    text(mensajeResultadoDuelo, width / 2, height * 0.35);
-
-    fill(230);
-    textSize(min(width, height) * 0.03);
-    let etiquetaP = tipoDueloSeleccionado === "CLIMB" ? "Plataformas" : "Puntos";
-    text("Tu Progreso: " + floor(miEstadoCompartido.puntajeDuelo) + " " + etiquetaP + " vs Rival: " + floor(puntajeRival), width / 2, height * 0.48);
-
-    dibujarBotonSatisfactorio(width * 0.35, height * 0.68, width * 0.3, height * 0.08, "Salir al Menú", color(100, 210, 120), color(60, 160, 80));
-    return;
-  }
-
-  temporizadorDuelo -= (60 * dt);
-  if (temporizadorDuelo <= 0) {
-    finDelDuelo = true;
-    let miPunt = miEstadoCompartido.puntajeDuelo;
-    if (miPunt > puntajeRival) {
-      mensajeResultadoDuelo = "🏆 ¡VICTORIA! GANASTE EL DUELO 🏆";
-      monedas += 30;
-      felicidad = min(100, felicidad + 20);
-    } else if (miPunt < puntajeRival) {
-      mensajeResultadoDuelo = "💔 DERROTA... EL RIVAL GANÓ";
-    } else {
-      mensajeResultadoDuelo = "🤝 ¡EMPATE!";
-      monedas += 10;
-    }
-    guardarJuego();
-  }
-
-  // --- LÓGICA DE DUELO EN RED SEGÚN EL ROL ---
-  if (esHostDuelo) {
-    let tiempoActual = millis();
-
-    if (tipoDueloSeleccionado === "GALLETAS") {
-      aceleracionGalletas += 0.03 * dt;
-      let galletasRed = miEstadoCompartido.objetosRed || [];
-
-      if (galletasRed.length === 0) {
-        miEstadoCompartido.objetosRed.push({
-          id: random(100000),
-          x: width / 2,
-          y: height * 0.3,
-          vx: random(-150, 150),
-          vy: 250,
-          ultimoGolpe: null
-        });
-      }
-
-      for (let i = galletasRed.length - 1; i >= 0; i--) {
-        let g = galletasRed[i];
-        g.x += g.vx * dt * aceleracionGalletas;
-        g.y += g.vy * dt * aceleracionGalletas;
-
-        if (g.x < 30 || g.x > width - 30) {
-          g.vx *= -1;
-          g.x = constrain(g.x, 30, width - 30);
-        }
-
-        let tamJ = min(width, height) * 0.12;
-
-        if (g.vy > 0 && dist(g.x, g.y, jugadorX, jugadorY) < tamJ * 0.7) {
-          g.vy = -abs(g.vy) - 20;
-          g.vx = (g.x - jugadorX) * 4;
-          g.ultimoGolpe = miEstadoCompartido.idJugador;
-          puntajeMinijuego += 10;
-        }
-
-        if (g.vy < 0 && dist(g.x, g.y, rivalX, rivalY) < tamJ * 0.7) {
-          g.vy = abs(g.vy) + 20;
-          g.vx = (g.x - rivalX) * 4;
-          g.ultimoGolpe = rivalData.idJugador;
-        }
-
-        if (g.y > height + 40 || g.y < -40) {
-          miEstadoCompartido.objetosRed.splice(i, 1);
-        }
-      }
-    } else if (tipoDueloSeleccionado === "NINJA") {
-      if (miEstadoCompartido.luzRed === "APAGADA" && tiempoActual > temporizadorLuz) {
-        miEstadoCompartido.luzRed = "ADVERTENCIA";
-        advertenciaLuz = tiempoActual + 1500;
-      } else if (miEstadoCompartido.luzRed === "ADVERTENCIA" && tiempoActual > advertenciaLuz) {
-        miEstadoCompartido.luzRed = "ENCENDIDA";
-        temporizadorLuz = tiempoActual + 3000;
-      } else if (miEstadoCompartido.luzRed === "ENCENDIDA" && tiempoActual > temporizadorLuz) {
-        miEstadoCompartido.luzRed = "APAGADA";
-        temporizadorLuz = tiempoActual + random(5000, 9000);
-      }
-
-      for (let p of miEstadoCompartido.paredesRed) {
-        if (frameCount > p.tiempoCambio) {
-          p.targetX = random(width * 0.15, width * 0.85);
-          p.targetY = random(height * 0.25, height * 0.8);
-          p.tiempoCambio = frameCount + floor(random(180, 300));
-        }
-        p.x = lerp(p.x, p.targetX, 2.5 * dt);
-        p.y = lerp(p.y, p.targetY, 2.5 * dt);
-      }
-
-      if (frameCount % 45 === 0) {
-        miEstadoCompartido.objetosRed.push({ id: random(100000), x: random(width * 0.1, width * 0.9), y: random(height * 0.2, height * 0.85), vida: 160 });
-      }
-    }
-  }
-
-  // --- RENDERIZADO DEL DUELO CLIMB ---
-  if (tipoDueloSeleccionado === "CLIMB") {
-    let platsRed = hostData.plataformasRed || [];
-    let tamJ = min(width, height) * 0.12;
-
-    for (let plat of platsRed) {
-      let screenY = plat.y - climbCamY + height * 0.65;
-
-      noStroke();
-      fill(80, 180, 100);
-      rect(plat.x - plat.w / 2, screenY, plat.w, plat.h, 8);
-      fill(255, 220, 100);
-      textSize(12);
-      text("#" + plat.index, plat.x, screenY + 9);
-
-      if (jugadorVY > 0) {
-        let pieY = jugadorY + tamJ / 2;
-        let pieViejo = (jugadorY - jugadorVY * dt) + tamJ / 2;
-        if (jugadorX >= plat.x - plat.w / 2 - 10 && jugadorX <= plat.x + plat.w / 2 + 10) {
-          if (pieViejo <= plat.y + 8 && pieY >= plat.y - 8) {
-            jugadorVY = SALTO_CLIMB;
-            jugadorY = plat.y - tamJ / 2;
-            maxPlataformaAlcanzada = max(maxPlataformaAlcanzada, plat.index);
-
-            if (maxPlataformaAlcanzada >= 25) {
-              finDelDuelo = true;
-              mensajeResultadoDuelo = "🏆 ¡LLEGASTE A LA PLATAFORMA 25 PRIMERO! 🏆";
-              monedas += 40;
-              guardarJuego();
-            }
-          }
-        }
-      }
-    }
-
-    if (jugadorY > climbCamY + height * 0.5) {
-      jugadorY = -maxPlataformaAlcanzada * 125 - 20;
-      jugadorVY = SALTO_CLIMB;
-    }
-
-    let rivalScreenY = rivalY - climbCamY + height * 0.65;
-    let tamR = min(width, height) * 0.13;
-    push();
-    let imgRivalTintada = obtenerImagenTintada(imgRival, rivalData.tinte);
-    image(imgRivalTintada, rivalX, rivalScreenY, tamR, tamR);
-    noTint();
-    fill(255, 120, 120);
-    textSize(13);
-    text((rivalData.nombreUsuario || rivalData.nombre) + " (#" + (rivalData.puntajeDuelo || 0) + ")", rivalX, rivalScreenY - tamJ * 0.6);
-    pop();
-
-    let miScreenY = jugadorY - climbCamY + height * 0.65;
-    if (imagenPersonaje) {
-      push();
-      let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
-      image(imgFinal, jugadorX, miScreenY, tamJ, tamJ);
-      pop();
-    }
-
-  } else if (tipoDueloSeleccionado === "GALLETAS") {
-    let objetosFuenteRed = hostData.objetosRed || [];
-    let tamR = min(width, height) * 0.13;
-
-    for (let obj of objetosFuenteRed) {
-      let renderX = obj.x;
-      let renderY = obj.y;
-
-      push();
-      if (!esHostDuelo) {
-        renderY = height - obj.y;
-        translate(renderX, renderY);
-        scale(1, -1);
-      } else {
-        translate(renderX, renderY);
-      }
-
-      textSize(min(width, height) * 0.05);
-      text("🍪", 0, 0);
-      pop();
-
-      let vyEfectiva = esHostDuelo ? obj.vy : -obj.vy;
-      let posYCliente = esHostDuelo ? obj.y : (height - obj.y);
-
-      if (!esHostDuelo && vyEfectiva > 0 && dist(obj.x, posYCliente, jugadorX, jugadorY) < tamR * 0.7) {
-        obj.vy = abs(obj.vy) + 20;
-        obj.vx = (obj.x - jugadorX) * 4;
-        puntajeMinijuego += 10;
-      }
-    }
-
-    push();
-    let imgRivalTintada = obtenerImagenTintada(imgRival, rivalData.tinte);
-    if (imgRivalTintada) image(imgRivalTintada, rivalX, rivalY, tamR, tamR);
-    fill(255, 120, 120);
-    textSize(14);
-    text(rivalData.nombreUsuario || rivalData.nombre, rivalX, rivalY + tamR * 0.7);
-    pop();
-
-    if (imagenPersonaje) {
-      push();
-      let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
-      image(imgFinal, jugadorX, jugadorY, tamR, tamR);
-      pop();
-    }
-  } else if (tipoDueloSeleccionado === "NINJA") {
-    let paredesFuenteRed = hostData.paredesRed || [];
-    let objetosFuenteRed = hostData.objetosRed || [];
-    let aSalvoLocal = false;
-
-    for (let p of paredesFuenteRed) {
-      noStroke();
-      fill(0, 50);
-      rect(p.x - p.w / 2 + 4, p.y - p.h / 2 + 4, p.w, p.h, 14);
-      stroke(60, 35, 15);
-      strokeWeight(2.5);
-      fill(100, 60, 30);
-      rect(p.x - p.w / 2, p.y - p.h / 2, p.w, p.h, 14);
-      noStroke();
-      textSize(min(width, height) * 0.04);
-      text("🪵", p.x, p.y);
-
-      if (abs(jugadorX - p.x) < p.w / 2 && abs(jugadorY - p.y) < p.h / 2) aSalvoLocal = true;
-    }
-
-    for (let i = objetosFuenteRed.length - 1; i >= 0; i--) {
-      let obj = objetosFuenteRed[i];
-      if (esHostDuelo) obj.vida -= (60 * dt);
-
-      textSize(min(width, height) * 0.05);
-      text("⭐", obj.x, obj.y);
-
-      if (dist(obj.x, obj.y, jugadorX, jugadorY) < min(width, height) * 0.08) {
-        puntajeMinijuego += 15;
-        if (esHostDuelo) miEstadoCompartido.objetosRed.splice(i, 1);
-        continue;
-      }
-      if (obj.vida <= 0 && esHostDuelo) miEstadoCompartido.objetosRed.splice(i, 1);
-    }
-
-    if (luzActual === "APAGADA") puntajeMinijuego += (6 * dt);
-    else if (luzActual === "ENCENDIDA" && !aSalvoLocal) puntajeMinijuego = max(0, puntajeMinijuego - (25 * dt));
-
-    push();
-    let tamR = min(width, height) * 0.15;
-    let imgRivalTintada = obtenerImagenTintada(imgRival, rivalData.tinte);
-    if (imgRivalTintada) image(imgRivalTintada, rivalX, rivalY, tamR, tamR);
-    fill(255, 120, 120);
-    textSize(14);
-    text(rivalData.nombreUsuario || rivalData.nombre, rivalX, rivalY - tamR * 0.6);
-    pop();
-
-    if (imagenPersonaje) {
-      let tamM = min(width, height) * 0.15;
-      push();
-      let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
-      image(imgFinal, jugadorX, jugadorY, tamM, tamM);
-      pop();
-    }
-  }
-
-  fill(255);
-  noStroke();
-  textSize(min(width, height) * 0.03);
-  textStyle(BOLD);
-  let unidad = tipoDueloSeleccionado === "CLIMB" ? " / 25" : " pts";
-  text("Tú: " + floor(miEstadoCompartido.puntajeDuelo) + unidad, width * 0.22, height * 0.08);
-  text("Rival: " + floor(puntajeRival) + unidad, width * 0.78, height * 0.08);
-
-  fill(255, 200, 60);
-  textSize(min(width, height) * 0.04);
-  text("⏳ " + max(0, ceil(temporizadorDuelo / 60)) + "s", width / 2, height * 0.08);
 }
 
 function dibujarPantallaPrincipal() {
@@ -797,7 +298,6 @@ function dibujarPantallaPrincipal() {
     fill(0, 80);
     ellipse(0, tam * 0.45, tam * 0.7, tam * 0.15);
 
-    // Aplicar tinte especial si está equipado
     let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
     image(imgFinal, 0, 0, tam, tam);
 
@@ -934,16 +434,17 @@ function dibujarMenuMinijuegos() {
   textSize(min(width, height) * 0.045);
   textStyle(BOLD);
   textAlign(CENTER, CENTER);
-  text("🎮 Selecciona un Minijuego", width / 2, height * 0.09);
+  text("🎮 Selecciona un Minijuego", width / 2, height * 0.07);
 
   let cardW = width * 0.72;
-  let cardH = height * 0.19;
+  let cardH = height * 0.16;
 
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.16, cardW, cardH, "🍪 Atrapa Galletas", "Atrapa galletas aceleradas y evita bombas.", color(45, 40, 55), color(230, 150, 80));
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.37, cardW, cardH, "🥷 Escape Ninja 2D", "Cúbrete tras las paredes móviles.", color(35, 45, 65), color(90, 150, 220));
-  dibujarTarjetaMinijuego(width * 0.14, height * 0.58, cardW, cardH, "🧗 Algebralian Climb", "Sube rebotando por plataformas infinitas. ¡Haz clic para un supersalto!", color(30, 55, 45), color(90, 210, 140));
+  dibujarTarjetaMinijuego(width * 0.14, height * 0.13, cardW, cardH, "🍪 Atrapa Galletas", "Atrapa galletas aceleradas y evita bombas.", color(45, 40, 55), color(230, 150, 80));
+  dibujarTarjetaMinijuego(width * 0.14, height * 0.30, cardW, cardH, "🥷 Escape Ninja 2D", "Cúbrete tras las paredes móviles.", color(35, 45, 65), color(90, 150, 220));
+  dibujarTarjetaMinijuego(width * 0.14, height * 0.47, cardW, cardH, "🧗 Algebralian Climb", "Sube por plataformas rebotando.", color(30, 55, 45), color(90, 210, 140));
+  dibujarTarjetaMinijuego(width * 0.14, height * 0.64, cardW, cardH, "🌋 Terremoto Deforme", "Haz clic para deformar la línea sísmica y esquivar pinchos.", color(55, 35, 45), color(220, 100, 100));
 
-  dibujarBotonSatisfactorio(width * 0.35, height * 0.82, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
+  dibujarBotonSatisfactorio(width * 0.35, height * 0.83, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
 }
 
 function dibujarTarjetaMinijuego(x, y, w, h, titulo, desc, colFondo, colBorde) {
@@ -963,12 +464,12 @@ function dibujarTarjetaMinijuego(x, y, w, h, titulo, desc, colFondo, colBorde) {
   textAlign(CENTER, CENTER);
 
   fill(230, 235, 245);
-  textSize(min(width, height) * 0.032);
+  textSize(min(width, height) * 0.03);
   textStyle(BOLD);
   text(titulo, 0, -h * 0.22);
 
   fill(160, 170, 190);
-  textSize(min(width, height) * 0.020);
+  textSize(min(width, height) * 0.019);
   textWrap(WORD);
   rectMode(CENTER);
   text(desc, 0, h * 0.18, w * 0.88, h * 0.5);
@@ -981,10 +482,9 @@ function iniciarMinijuegoGalletas() {
   puntajeMinijuego = 0;
   monedasGanadasMinijuego = 0;
   jugadorX = width / 2;
-  jugadorY = height * 0.82; // Fijo abajo en modo normal
+  jugadorY = height * 0.82;
   comidaArrastrando = null;
   gameOverGalletas = false;
-  aceleracionGalletas = 1.0;
 }
 
 function ejecutarMinijuegoGalletas(dt) {
@@ -1007,9 +507,7 @@ function ejecutarMinijuegoGalletas(dt) {
 
   background(35, 30, 45);
   jugadorX = constrain(mouseX, 40, width - 40);
-  jugadorY = height * 0.82; // Posición fija abajo en modo 1 solo jugador
-
-  aceleracionGalletas += 0.02 * dt;
+  jugadorY = height * 0.82;
 
   if (frameCount % 10 === 0) {
     let azar = random(1);
@@ -1017,7 +515,7 @@ function ejecutarMinijuegoGalletas(dt) {
     if (azar < 0.25) tipoObjeto = "BOMBA";
     else if (azar < 0.55) tipoObjeto = "MONEDA";
 
-    objetos.push({ x: random(20, width - 20), y: -20, vy: random(180, 320) * aceleracionGalletas, tipo: tipoObjeto });
+    objetos.push({ x: random(20, width - 20), y: -20, vy: random(180, 320), tipo: tipoObjeto });
   }
 
   for (let i = objetos.length - 1; i >= 0; i--) {
@@ -1153,9 +651,9 @@ function ejecutarMinijuegoNinja(dt) {
   if (estadoLuz === "ENCENDIDA" && !aSalvo) {
     margenDeVida += deltaTime;
     if (margenDeVida > 0.07) {
-    gameOverNinja = true;
-    guardarJuego();
-    return;
+      gameOverNinja = true;
+      guardarJuego();
+      return;
     }
   }
 
@@ -1317,21 +815,172 @@ function ejecutarMinijuegoClimb(dt) {
   dibujarHUDMinijuego();
 }
 
-function intentarSuperSaltoClimb() {
-  if (estadoJuego !== "MINIJUEGO_CLIMB" && !(estadoJuego === "SALA_DUELO" && tipoDueloSeleccionado === "CLIMB")) return;
+// --- LÓGICA MINIJUEGO TERREMOTO DEFORME ---
+function iniciarMinijuegoTerremoto() {
+  estadoJuego = "MINIJUEGO_TERREMOTO";
+  puntajeMinijuego = 0;
+  monedasGanadasMinijuego = 0;
+  gameOverTerremoto = false;
+  terremotoAlgebralianX = width * 0.1;
+  terremotoDireccion = 1;
 
-  let tamJ = min(width, height) * 0.12;
-  let listaPlats = (estadoJuego === "SALA_DUELO") ? (miEstadoCompartido.plataformasRed || []) : plataformas;
+  let numPuntos = 20;
+  terremotoPuntos = [];
+  let baseHeight = height * 0.55;
+  let pasoX = width / (numPuntos - 1);
 
-  for (let plat of listaPlats) {
-    let distanciaY = abs((jugadorY + tamJ / 2) - plat.y);
-    let dentroEnX = jugadorX >= plat.x - plat.w / 2 - 25 && jugadorX <= plat.x + plat.w / 2 + 25;
+  for (let i = 0; i < numPuntos; i++) {
+    terremotoPuntos.push({
+      x: i * pasoX,
+      y: baseHeight + sin(i * 0.8) * 40,
+      targetY: baseHeight + sin(i * 0.8) * 40
+    });
+  }
 
-    if (dentroEnX && distanciaY < 65 && jugadorVY > -100) {
-      jugadorVY = SALTO_CLIMB * 1.4;
-      break;
+  terremotoPinchos = [];
+  for (let i = 0; i < 4; i++) {
+    terremotoPinchos.push({
+      idx: floor(random(2, numPuntos - 2)),
+      fase: random(TWO_PI),
+      velocidad: random(2, 5),
+      activo: false
+    });
+  }
+
+  terremotoMonedas = [];
+  for (let i = 0; i < 3; i++) {
+    terremotoMonedas.push({
+      idx: floor(random(1, numPuntos - 1)),
+      visible: true,
+      timer: random(100, 300)
+    });
+  }
+
+  obtenerPosicionTerremoto();
+}
+
+function obtenerPosicionTerremoto() {
+  let pasoX = width / (terremotoPuntos.length - 1);
+  let idx = constrain(floor(terremotoAlgebralianX / pasoX), 0, terremotoPuntos.length - 2);
+  let pct = (terremotoAlgebralianX - idx * pasoX) / pasoX;
+
+  let y1 = terremotoPuntos[idx].y;
+  let y2 = terremotoPuntos[idx + 1].y;
+
+  terremotoAlgebralianY = lerp(y1, y2, pct) - 25;
+}
+
+function ejecutarMinijuegoTerremoto(dt) {
+  if (gameOverTerremoto) {
+    background(30, 15, 20);
+    fill(240, 70, 70);
+    textSize(min(width, height) * 0.06);
+    textStyle(BOLD);
+    text("🌋 ¡GAME OVER! 🌋", width / 2, height * 0.3);
+
+    fill(230);
+    textSize(min(width, height) * 0.03);
+    text("¡Te pinchaste con los pinchos sísmicos!", width / 2, height * 0.42);
+    text("Puntos conseguidos: " + floor(puntajeMinijuego), width / 2, height * 0.5);
+    text("Monedas recolectadas: 🪙 " + monedasGanadasMinijuego, width / 2, height * 0.56);
+
+    dibujarBotonSatisfactorio(width * 0.35, height * 0.72, width * 0.3, height * 0.08, "Aceptar", color(240, 90, 90), color(190, 60, 60));
+    return;
+  }
+
+  background(40, 25, 35);
+
+  for (let p of terremotoPuntos) {
+    p.y = lerp(p.y, p.targetY, 6 * dt);
+  }
+
+  terremotoAlgebralianX += terremotoDireccion * terremotoVelocidad * dt;
+  if (terremotoAlgebralianX >= width - 40) {
+    terremotoAlgebralianX = width - 40;
+    terremotoDireccion = -1;
+    puntajeMinijuego += 10;
+  } else if (terremotoAlgebralianX <= 40) {
+    terremotoAlgebralianX = 40;
+    terremotoDireccion = 1;
+    puntajeMinijuego += 10;
+  }
+
+  obtenerPosicionTerremoto();
+
+  // Dibujar terremoto (Línea sísmica)
+  stroke(220, 100, 100);
+  strokeWeight(8);
+  noFill();
+  beginShape();
+  for (let p of terremotoPuntos) {
+    vertex(p.x, p.y);
+  }
+  endShape();
+
+  stroke(150, 50, 50);
+  strokeWeight(2);
+  for (let p of terremotoPuntos) {
+    line(p.x, p.y, p.x, height);
+  }
+
+  let pasoX = width / (terremotoPuntos.length - 1);
+
+  // Pinchos
+  for (let pincho of terremotoPinchos) {
+    pincho.fase += pincho.velocidad * dt;
+    let offset = sin(pincho.fase) * 40;
+    let px = terremotoPuntos[pincho.idx].x;
+    let py = terremotoPuntos[pincho.idx].y - offset;
+
+    noStroke();
+    fill(255, 80, 80);
+    triangle(px - 12, terremotoPuntos[pincho.idx].y, px + 12, terremotoPuntos[pincho.idx].y, px, py - 15);
+
+    if (dist(terremotoAlgebralianX, terremotoAlgebralianY, px, py - 10) < 25) {
+      gameOverTerremoto = true;
+      guardarJuego();
+      return;
     }
   }
+
+  // Monedas
+  for (let m of terremotoMonedas) {
+    m.timer -= 60 * dt;
+    if (m.timer <= 0) {
+      m.visible = !m.visible;
+      m.timer = random(100, 300);
+      m.idx = floor(random(1, terremotoPuntos.length - 1));
+    }
+
+    if (m.visible) {
+      let mx = terremotoPuntos[m.idx].x;
+      let my = terremotoPuntos[m.idx].y - 35;
+
+      noStroke();
+      fill(255, 200, 60);
+      textSize(min(width, height) * 0.04);
+      text("🪙", mx, my);
+
+      if (dist(terremotoAlgebralianX, terremotoAlgebralianY, mx, my) < 30) {
+        monedas++;
+        monedasGanadasMinijuego++;
+        m.visible = false;
+        m.timer = random(120, 250);
+      }
+    }
+  }
+
+  // Dibujar Algebralian rebotando
+  let tam = min(width, height) * 0.12;
+  let rebo = abs(sin(frameCount * 0.15)) * 12;
+
+  push();
+  let imgFinal = obtenerImagenTintada(imagenPersonaje, colorTinte);
+  image(imgFinal, terremotoAlgebralianX, terremotoAlgebralianY - rebo - tam / 2, tam, tam);
+  pop();
+
+  puntajeMinijuego += 2 * dt;
+  dibujarHUDMinijuego();
 }
 
 function keyPressed() {
@@ -1344,10 +993,6 @@ function keyPressed() {
       return false;
     }
   }
-
-  if (key === ' ' || keyCode === UP_ARROW) {
-    intentarSuperSaltoClimb();
-  }
 }
 
 function dibujarHUDMinijuego() {
@@ -1359,7 +1004,6 @@ function dibujarHUDMinijuego() {
   text(txtP, width * 0.2, height * 0.05);
   text("🪙 + " + monedasGanadasMinijuego, width * 0.5, height * 0.05);
 
-  // Botón "Salir" centrado responsivo
   let btnW = min(width, height) * 0.18;
   let btnH = min(width, height) * 0.06;
   let btnX = width * 0.82 - btnW / 2;
@@ -1367,7 +1011,6 @@ function dibujarHUDMinijuego() {
 
   dibujarBotonSatisfactorio(btnX, btnY, btnW, btnH, "Salir", color(240, 80, 80), color(180, 50, 50));
 }
-
 
 function dibujarTienda() {
   background(26, 30, 44);
@@ -1438,7 +1081,6 @@ function dibujarItemTienda(y, emoji, nombre, precioTexto) {
   pop();
 }
 
-// --- MENÚ DE SELECCIÓN Y PREVISUALIZACIÓN DE TINTES ---
 function abrirMenuTintes() {
   tintePrevisualizado = colorTinte ? [...colorTinte] : null;
   estadoJuego = "MENU_TINTES";
@@ -1457,7 +1099,6 @@ function dibujarMenuSeleccionTintes() {
   fill(170, 180, 205);
   text("Selecciona un color para previsualizar la apariencia", width / 2, height * 0.13);
 
-  // --- PREVISUALIZACIÓN CENTRAL DE TU ALGEBRALIAN ---
   let prevX = width / 2;
   let prevY = height * 0.32;
   let tam = min(width, height) * 0.28;
@@ -1489,7 +1130,6 @@ function dibujarMenuSeleccionTintes() {
   }
   pop();
 
-  // Nombre del color seleccionado
   let nombreColor = "SIN TINTE (Original)";
   if (tintePrevisualizado) {
     let encontrado = PALETA_TINTES.find(t => t.color[0] === tintePrevisualizado[0] && t.color[1] === tintePrevisualizado[1] && t.color[2] === tintePrevisualizado[2]);
@@ -1500,7 +1140,6 @@ function dibujarMenuSeleccionTintes() {
   textStyle(BOLD);
   text("Color: " + nombreColor, width / 2, height * 0.51);
 
-  // --- PALETA EN CUADRÍCULA ---
   let cols = 4;
   let btnW = width * 0.18;
   let btnH = height * 0.065;
@@ -1523,7 +1162,6 @@ function dibujarMenuSeleccionTintes() {
     let colBtn = color(c[0], c[1], c[2]);
     let colSombra = color(max(0, c[0] - 50), max(0, c[1] - 50), max(0, c[2] - 50));
 
-    // Resaltar si está seleccionado en la previsualización
     let seleccionado = tintePrevisualizado && tintePrevisualizado[0] === c[0] && tintePrevisualizado[1] === c[1] && tintePrevisualizado[2] === c[2];
     if (seleccionado) {
       stroke(255, 230, 80);
@@ -1535,7 +1173,6 @@ function dibujarMenuSeleccionTintes() {
     dibujarBotonSatisfactorio(bx, by, btnW, btnH, item.nombre, colBtn, colSombra);
   }
 
-  // --- BOTONES INFERIORES ---
   let bW = width * 0.25;
   let bH = height * 0.075;
   let bY = height * 0.82;
@@ -1556,7 +1193,6 @@ function manejarClickMenuTintes() {
   let startX = width / 2 - totalW / 2;
   let startY = height * 0.56;
 
-  // Selección de color de la paleta
   for (let i = 0; i < PALETA_TINTES.length; i++) {
     let colIndex = i % cols;
     let rowIndex = floor(i / cols);
@@ -1574,19 +1210,16 @@ function manejarClickMenuTintes() {
   let bH = height * 0.075;
   let bY = height * 0.82;
 
-  // Botón Quitar Tinte
   if (colisionCaja(width * 0.08, bY, bW, bH)) {
     tintePrevisualizado = null;
   }
 
-  // Botón Guardar Tinte
   if (colisionCaja(width * 0.375, bY, bW, bH)) {
     colorTinte = tintePrevisualizado;
     guardarJuego();
     estadoJuego = "TIENDA";
   }
 
-  // Botón Cancelar
   if (colisionCaja(width * 0.67, bY, bW, bH)) {
     estadoJuego = "TIENDA";
   }
@@ -1616,8 +1249,8 @@ function dibujarGuarderiaOnline() {
   if (otrosJugadores.length === 0) {
     fill(180, 190, 210);
     textSize(min(width, height) * 0.028);
-    text("Buscando cuidadores en red...", width / 2, height * 0.45);
-    text("🟢 Estás en la guardería esperando...", width / 2, height * 0.52);
+    text("Buscando Algebralians en la guardería...", width / 2, height * 0.45);
+    text("🟢 Estás solo por ahora en la red...", width / 2, height * 0.52);
     dibujarBotonSatisfactorio(width * 0.35, height * 0.82, width * 0.3, height * 0.08, "Volver", color(240, 90, 90), color(190, 60, 60));
     return;
   }
@@ -1640,8 +1273,8 @@ function dibujarGuarderiaOnline() {
 
   textSize(min(width, height) * 0.022);
   fill(160, 170, 190);
-  text("Personaje: " + (jugadorActual.nombre || "Algebralian"), width / 2, height * 0.27);
-  text("Estado actual: " + (jugadorActual.estado || "Normal"), width / 2, height * 0.31);
+  text("Personaje: " + (jugadorActual.nombre || "Algebralian"), width / 2, height * 0.26);
+  text("Hambre actual: " + floor(jugadorActual.hambre || 0) + "%", width / 2, height * 0.30);
 
   let tam = min(width, height) * 0.25;
   if (imgJugadorGuarderia) {
@@ -1664,7 +1297,13 @@ function dibujarGuarderiaOnline() {
     pop();
   }
 
-  dibujarBotonSatisfactorio(width * 0.25, height * 0.65, width * 0.5, height * 0.07, "⚔️ DESAFIAR A DUELO", color(240, 90, 90), color(180, 50, 50));
+  dibujarBotonSatisfactorio(width * 0.25, height * 0.64, width * 0.5, height * 0.07, "🍎 ALIMENTAR (+15 Monedas)", color(100, 210, 120), color(60, 160, 80));
+
+  if (mensajeGuarderia !== "") {
+    fill(255, 220, 100);
+    textSize(min(width, height) * 0.022);
+    text(mensajeGuarderia, width / 2, height * 0.73);
+  }
 
   dibujarBotonSatisfactorio(width * 0.05, height * 0.42, width * 0.08, height * 0.1, "◀", color(80, 160, 240), color(50, 120, 190));
   dibujarBotonSatisfactorio(width * 0.87, height * 0.42, width * 0.08, height * 0.1, "▶", color(80, 160, 240), color(50, 120, 190));
@@ -1810,45 +1449,11 @@ function mousePressed() {
     return;
   }
 
-  intentarSuperSaltoClimb();
-
-  if (miEstadoCompartido && miEstadoCompartido.retoRecibido && estadoJuego !== "SALA_DUELO" && estadoJuego !== "ESPERANDO_RESPUESTA_DUELO") {
-    let infoReto = miEstadoCompartido.retoRecibido;
-
-    if (colisionCaja(width * 0.22, height * 0.58, width * 0.26, height * 0.08)) {
-      miEstadoCompartido.retoRecibido = null;
-      iniciarDuelo(infoReto.deId, infoReto.tipoMinijuego || "GALLETAS");
-      return;
-    }
-    if (colisionCaja(width * 0.52, height * 0.58, width * 0.26, height * 0.08)) {
-      miEstadoCompartido.retoRecibido = null;
-      return;
-    }
-  }
-
-  if (estadoJuego === "ESPERANDO_RESPUESTA_DUELO") {
-    let rivalData = listaJugadores.find(p => p.idJugador === idRivalDuelo);
-    if (!rivalData) {
-      if (colisionCaja(width * 0.35, height * 0.60, width * 0.3, height * 0.08)) {
-        miEstadoCompartido.estadoDuelo = "LIBRE";
-        estadoJuego = "GUARDERIA";
-        return;
+  if (estadoJuego === "MINIJUEGO_TERREMOTO" && !gameOverTerremoto) {
+    for (let p of terremotoPuntos) {
+      if (dist(mouseX, mouseY, p.x, p.y) < 80) {
+        p.targetY = mouseY;
       }
-    } else {
-      if (colisionCaja(width * 0.35, height * 0.65, width * 0.3, height * 0.08)) {
-        miEstadoCompartido.estadoDuelo = "LIBRE";
-        estadoJuego = "GUARDERIA";
-        return;
-      }
-    }
-  }
-
-  if (estadoJuego === "SALA_DUELO") {
-    let rivalData = listaJugadores.find(p => p.idJugador === idRivalDuelo);
-    if (!rivalData && colisionCaja(width * 0.35, height * 0.60, width * 0.3, height * 0.08)) {
-      miEstadoCompartido.estadoDuelo = "LIBRE";
-      estadoJuego = "GUARDERIA";
-      return;
     }
   }
 
@@ -1871,44 +1476,27 @@ function mousePressed() {
     if (colisionCaja(width * 0.78, btnY, btnW, btnH)) estadoJuego = "GUARDERIA";
 
   } else if (estadoJuego === "MENU_MINIJUEGOS") {
-    let cardW = width * 0.72, cardH = height * 0.19;
+    let cardW = width * 0.72, cardH = height * 0.16;
 
-    if (colisionCaja(width * 0.14, height * 0.16, cardW, cardH)) iniciarMinijuegoGalletas();
-    if (colisionCaja(width * 0.14, height * 0.37, cardW, cardH)) iniciarMinijuegoNinja();
-    if (colisionCaja(width * 0.14, height * 0.58, cardW, cardH)) iniciarMinijuegoClimb();
-    if (colisionCaja(width * 0.35, height * 0.82, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
+    if (colisionCaja(width * 0.14, height * 0.13, cardW, cardH)) iniciarMinijuegoGalletas();
+    if (colisionCaja(width * 0.14, height * 0.30, cardW, cardH)) iniciarMinijuegoNinja();
+    if (colisionCaja(width * 0.14, height * 0.47, cardW, cardH)) iniciarMinijuegoClimb();
+    if (colisionCaja(width * 0.14, height * 0.64, cardW, cardH)) iniciarMinijuegoTerremoto();
+    if (colisionCaja(width * 0.35, height * 0.83, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
 
-  } else if (estadoJuego === "MENU_SELECCION_RETOS") {
-    let cardW = width * 0.72, cardH = height * 0.19;
-    let otrosJugadores = listaJugadores.filter(p => p.idJugador !== miEstadoCompartido.idJugador);
-    let objetivo = otrosJugadores[indiceGuarderia];
-
-    if (objetivo) {
-      if (colisionCaja(width * 0.14, height * 0.16, cardW, cardH)) enviarDesafioDuelo(objetivo.idJugador, "GALLETAS");
-      if (colisionCaja(width * 0.14, height * 0.37, cardW, cardH)) enviarDesafioDuelo(objetivo.idJugador, "NINJA");
-      if (colisionCaja(width * 0.14, height * 0.58, cardW, cardH)) enviarDesafioDuelo(objetivo.idJugador, "CLIMB");
-    }
-    if (colisionCaja(width * 0.35, height * 0.82, width * 0.3, height * 0.08)) estadoJuego = "GUARDERIA";
-  } else if (estadoJuego === "MINIJUEGO_GALLETAS" || estadoJuego === "MINIJUEGO_NINJA" || estadoJuego === "MINIJUEGO_CLIMB") {
-    if (gameOverGalletas || gameOverNinja || gameOverClimb) {
+  } else if (estadoJuego === "MINIJUEGO_GALLETAS" || estadoJuego === "MINIJUEGO_NINJA" || estadoJuego === "MINIJUEGO_CLIMB" || estadoJuego === "MINIJUEGO_TERREMOTO") {
+    if (gameOverGalletas || gameOverNinja || gameOverClimb || gameOverTerremoto) {
       if (colisionCaja(width * 0.35, height * 0.72, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
     } else {
-      // Coordenadas exactas matching a dibujarHUDMinijuego con margen de tolerancia (+10px)
       let btnW = min(width, height) * 0.18;
       let btnH = min(width, height) * 0.06;
       let btnX = width * 0.82 - btnW / 2;
       let btnY = height * 0.03;
 
-      // Evaluamos con un margen expandido de 10px para que el clic sea 100% consistente
       if (colisionCaja(btnX, btnY, btnW, btnH)) {
         guardarJuego();
         estadoJuego = "PRINCIPAL";
       }
-    }
-  } else if (estadoJuego === "SALA_DUELO") {
-    if (finDelDuelo && colisionCaja(width * 0.35, height * 0.68, width * 0.3, height * 0.08)) {
-      miEstadoCompartido.estadoDuelo = "LIBRE";
-      estadoJuego = "PRINCIPAL";
     }
   } else if (estadoJuego === "TIENDA") {
     let pW = width * 0.35, pH = height * 0.06;
@@ -1923,7 +1511,6 @@ function mousePressed() {
       if (colisionCaja(btnX, height * 0.40 + height * 0.032, btnWItem, btnHItem) && monedas >= 20) { monedas -= 20; inventarioComida.pizza++; guardarJuego(); }
       if (colisionCaja(btnX, height * 0.55 + height * 0.032, btnWItem, btnHItem) && monedas >= 35) { monedas -= 35; inventarioComida.pastel++; guardarJuego(); }
     } else if (pestanaTienda === "DECORACION") {
-      // Gorro Casual
       if (colisionCaja(btnX, height * 0.25 + height * 0.032, btnWItem, btnHItem)) {
         let poseoGorro = decoracionesCompradas.includes("GORRO");
         if (!poseoGorro && monedas >= 30) {
@@ -1935,7 +1522,6 @@ function mousePressed() {
         }
         guardarJuego();
       }
-      // Sombrero Elegante
       if (colisionCaja(btnX, height * 0.39 + height * 0.032, btnWItem, btnHItem)) {
         let poseoSombrero = decoracionesCompradas.includes("SOMBRERO");
         if (!poseoSombrero && monedas >= 50) {
@@ -1947,7 +1533,6 @@ function mousePressed() {
         }
         guardarJuego();
       }
-      // Corona Real
       if (colisionCaja(btnX, height * 0.53 + height * 0.032, btnWItem, btnHItem)) {
         let poseoCorona = decoracionesCompradas.includes("CORONA");
         if (!poseoCorona && monedas >= 100) {
@@ -1959,7 +1544,6 @@ function mousePressed() {
         }
         guardarJuego();
       }
-      // Tinte Especial
       if (colisionCaja(btnX, height * 0.67 + height * 0.032, btnWItem, btnHItem)) {
         let poseoTinte = decoracionesCompradas.includes("TINTE");
         if (!poseoTinte && monedas >= 40) {
@@ -1987,15 +1571,26 @@ function mousePressed() {
     if (otrosJugadores.length > 0) {
       if (colisionCaja(width * 0.05, height * 0.42, width * 0.08, height * 0.1)) {
         indiceGuarderia = (indiceGuarderia - 1 + otrosJugadores.length) % otrosJugadores.length;
+        mensajeGuarderia = "";
       }
       if (colisionCaja(width * 0.87, height * 0.42, width * 0.08, height * 0.1)) {
         indiceGuarderia = (indiceGuarderia + 1) % otrosJugadores.length;
+        mensajeGuarderia = "";
       }
-      if (colisionCaja(width * 0.25, height * 0.65, width * 0.5, height * 0.07)) {
-        estadoJuego = "MENU_SELECCION_RETOS";
+      if (colisionCaja(width * 0.25, height * 0.64, width * 0.5, height * 0.07)) {
+        let objetivo = otrosJugadores[indiceGuarderia];
+        if (objetivo) {
+          objetivo.hambre = min(100, (objetivo.hambre || 50) + 20);
+          monedas += 15;
+          mensajeGuarderia = "✨ ¡Alimentaste a " + (objetivo.nombreUsuario || "Algebralian") + "! Ganaste 15 monedas 🪙";
+          guardarJuego();
+        }
       }
     }
 
-    if (colisionCaja(width * 0.35, height * 0.82, width * 0.3, height * 0.08)) estadoJuego = "PRINCIPAL";
+    if (colisionCaja(width * 0.35, height * 0.82, width * 0.3, height * 0.08)) {
+      mensajeGuarderia = "";
+      estadoJuego = "PRINCIPAL";
+    }
   }
 }
